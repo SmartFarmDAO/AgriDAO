@@ -8,46 +8,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Heart, DollarSign, TrendingUp, Users, CheckCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { donateToRequest, listFundingRequests, getFinanceMetrics, type FinanceMetrics } from "@/lib/api";
+import type { FundingRequest } from "@/types";
 
 const Finance = () => {
   const [selectedAmount, setSelectedAmount] = useState("");
 
-  const fundingRequests = [
-    {
-      id: 1,
-      farmer: "Maria Santos",
-      purpose: "Organic Seeds & Fertilizer",
-      amountNeeded: 2500,
-      amountRaised: 1800,
-      daysLeft: 12,
-      location: "California, USA",
-      description: "Need funding to purchase organic seeds and natural fertilizer for the upcoming season.",
-      category: "Seeds & Supplies",
+  const queryClient = useQueryClient();
+  const { data: fundingRequests, isLoading, isError } = useQuery<FundingRequest[]>({
+    queryKey: ["fundingRequests"],
+    queryFn: listFundingRequests,
+  });
+
+  const { data: metrics } = useQuery<FinanceMetrics>({
+    queryKey: ["financeMetrics"],
+    queryFn: getFinanceMetrics,
+  });
+
+  const donateMutation = useMutation({
+    mutationFn: ({ id, amount }: { id: number; amount: number }) => donateToRequest(id, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fundingRequests"] });
+      setSelectedAmount("");
     },
-    {
-      id: 2,
-      farmer: "Ahmed Hassan",
-      purpose: "Irrigation System Upgrade",
-      amountNeeded: 5000,
-      amountRaised: 3200,
-      daysLeft: 25,
-      location: "Morocco",
-      description: "Installing drip irrigation to conserve water and improve crop yields.",
-      category: "Infrastructure",
-    },
-    {
-      id: 3,
-      farmer: "Chen Wei",
-      purpose: "Farming Equipment",
-      amountNeeded: 3500,
-      amountRaised: 3500,
-      daysLeft: 0,
-      location: "Hunan, China",
-      description: "Purchase of modern farming tools to increase productivity and reduce manual labor.",
-      category: "Equipment",
-      status: "Funded",
-    },
-  ];
+  });
 
   const quickAmounts = [50, 100, 250, 500, 1000];
 
@@ -68,34 +53,34 @@ const Finance = () => {
           </div>
         </div>
 
-        {/* Impact Stats */}
+        {/* Impact Stats (live metrics) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-6 text-center">
               <Heart className="h-8 w-8 text-red-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold">$847K</div>
-              <div className="text-sm text-muted-foreground">Total Donated</div>
+              <div className="text-2xl font-bold">${(metrics?.gmv ?? 0).toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">GMV (Paid Orders)</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
               <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold">1,247</div>
-              <div className="text-sm text-muted-foreground">Farmers Helped</div>
+              <div className="text-2xl font-bold">{metrics?.orders_paid ?? 0}</div>
+              <div className="text-sm text-muted-foreground">Paid Orders</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
               <TrendingUp className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold">96%</div>
-              <div className="text-sm text-muted-foreground">Success Rate</div>
+              <div className="text-2xl font-bold">{((metrics?.take_rate ?? 0) * 100).toFixed(1)}%</div>
+              <div className="text-sm text-muted-foreground">Take Rate</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
               <CheckCircle className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold">342</div>
-              <div className="text-sm text-muted-foreground">Projects Funded</div>
+              <div className="text-2xl font-bold">${(metrics?.fee_revenue ?? 0).toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">Fee Revenue</div>
             </CardContent>
           </Card>
         </div>
@@ -121,7 +106,7 @@ const Finance = () => {
             {/* Funding Requests */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {fundingRequests.map((request) => {
-                const progressPercentage = (request.amountRaised / request.amountNeeded) * 100;
+                const progressPercentage = (request.amount_raised / request.amount_needed) * 100;
                 const isCompleted = request.status === "Funded";
 
                 return (
@@ -130,7 +115,7 @@ const Finance = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <CardTitle className="text-lg">{request.purpose}</CardTitle>
-                          <CardDescription>by {request.farmer} • {request.location}</CardDescription>
+                          <CardDescription>by {request.farmer_name} • {request.location}</CardDescription>
                         </div>
                         <Badge variant={isCompleted ? "default" : "secondary"}>
                           {isCompleted ? "Funded" : request.category}
@@ -142,13 +127,13 @@ const Finance = () => {
                       
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span>${request.amountRaised} raised</span>
-                          <span>${request.amountNeeded} goal</span>
+                          <span>${request.amount_raised} raised</span>
+                          <span>${request.amount_needed} goal</span>
                         </div>
                         <Progress value={progressPercentage} className="h-2" />
                         <div className="flex justify-between text-sm text-muted-foreground">
                           <span>{Math.round(progressPercentage)}% funded</span>
-                          <span>{isCompleted ? "Completed" : `${request.daysLeft} days left`}</span>
+                          <span>{isCompleted ? "Completed" : `${request.days_left} days left`}</span>
                         </div>
                       </div>
 

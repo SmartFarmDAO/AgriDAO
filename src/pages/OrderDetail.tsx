@@ -4,12 +4,14 @@ import { getOrder } from "@/lib/api";
 import { Order } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -28,7 +30,9 @@ const OrderDetailPage = () => {
   }, [orderId]);
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (error) {
+    toast({ title: "Order Error", description: error, variant: "destructive" });
+  }
   if (!order) return <div>Order not found.</div>;
 
   return (
@@ -55,16 +59,38 @@ const OrderDetailPage = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {order.items?.map((item) => (
-            <TableRow key={item.product_id}>
-              <TableCell>{item.product_name || 'N/A'}</TableCell>
-              <TableCell>{item.quantity}</TableCell>
-              <TableCell>${item.unit_price.toFixed(2)}</TableCell>
-              <TableCell>${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item) => (
+              <TableRow key={item.product_id}>
+                <TableCell>{item.product_name || 'N/A'}</TableCell>
+                <TableCell>{item.quantity}</TableCell>
+                <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                <TableCell>${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center text-muted-foreground">No items on this order.</TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
+
+      {/* Fee Breakdown */}
+      <div className="mt-6 max-w-md ml-auto space-y-1">
+        <div className="flex justify-between text-sm">
+          <span>Subtotal</span>
+          <span>${order.subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Platform fee</span>
+          <span>${order.platform_fee.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center border-t pt-2 mt-2">
+          <span className="font-semibold">Total</span>
+          <span className="font-semibold">${order.total.toFixed(2)}</span>
+        </div>
+      </div>
     </div>
   );
 };

@@ -63,6 +63,16 @@ export const listFundingRequests = () => apiGet<import("@/types").FundingRequest
 export const donateToRequest = (id: number, amount: number) =>
   apiPost<import("@/types").FundingRequest>(`/finance/requests/${id}/donate`, { amount });
 
+export type FinanceMetrics = {
+  gmv: number;
+  fee_revenue: number;
+  orders_total: number;
+  orders_paid: number;
+  take_rate: number; // 0..1
+};
+
+export const getFinanceMetrics = () => apiGet<FinanceMetrics>("/finance/metrics");
+
 // Auth (OTP)
 export const requestOtp = (email: string) => apiPost<{ sent: boolean; dev_code?: string }>(
   "/auth/otp/request",
