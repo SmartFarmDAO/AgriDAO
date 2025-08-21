@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# AgriDAO – Ethical AgriFinance & Marketplace
 
 ## Project info
 
@@ -36,6 +36,47 @@ npm i
 npm run dev
 ```
 
+## Backend (FastAPI)
+
+The backend lives in `backend/` and provides authentication, marketplace, governance and finance KPIs.
+
+Quick start (local Python):
+
+```sh
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Using Docker Compose (frontend + backend):
+
+```sh
+docker compose up --build
+```
+
+API base URL (local): `http://localhost:8000`
+
+Key endpoints:
+
+- GET `/marketplace/products` – list products
+- GET `/finance/requests` – list funding requests
+- POST `/finance/requests/{id}/donate` – donate to a request
+- GET `/finance/metrics` – finance KPIs (GMV, fee revenue, orders, take rate)
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and set values as needed. Notable variables:
+
+- `VITE_API_BASE` – frontend API base (e.g., http://localhost:8000)
+- `VITE_PLATFORM_FEE_RATE` – platform fee rate (e.g., 0.08)
+
+Backend-specific variables are documented in `backend/README.md` and `backend/pyproject.toml`/`requirements.txt`.
+
+## Mobile App (optional)
+
+An experimental mobile client lives in `mobile/`. You can open it with Expo tooling if desired.
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
@@ -54,11 +95,9 @@ npm run dev
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Vite, TypeScript, React, shadcn-ui, Tailwind CSS (web)
+- FastAPI, SQLModel, SQLite (backend)
+- Docker Compose (dev orchestration)
 
 ## How can I deploy this project?
 
