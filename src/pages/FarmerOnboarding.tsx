@@ -7,9 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Shield, Smartphone, Camera, CheckCircle } from "lucide-react";
+import { createMyFarmerProfile } from "@/lib/api";
 
 const FarmerOnboarding = () => {
   const [currentStep, setCurrentStep] = useState("identity");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [farmName, setFarmName] = useState("");
+  const [location, setLocation] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const onboardingSteps = [
     { id: "identity", label: "Identity Verification", icon: Shield },
@@ -79,11 +86,11 @@ const FarmerOnboarding = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="phone">Mobile Number</Label>
-                      <Input id="phone" placeholder="+1 (555) 123-4567" type="tel" />
+                      <Input id="phone" placeholder="+1 (555) 123-4567" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email (Optional)</Label>
-                      <Input id="email" placeholder="farmer@example.com" type="email" />
+                      <Input id="email" placeholder="farmer@example.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
                   </div>
                   
@@ -98,6 +105,7 @@ const FarmerOnboarding = () => {
                   <Button onClick={() => setCurrentStep("biometric")} className="w-full">
                     Verify Phone Number
                   </Button>
+                  {error && <div className="text-red-600 text-sm mt-4">{error}</div>}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -166,7 +174,7 @@ const FarmerOnboarding = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="farmName">Farm Name</Label>
-                      <Input id="farmName" placeholder="Green Valley Farm" />
+                      <Input id="farmName" placeholder="Green Valley Farm" value={farmName} onChange={(e) => setFarmName(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="farmSize">Farm Size (acres)</Label>
@@ -176,7 +184,7 @@ const FarmerOnboarding = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="location">Farm Location</Label>
-                    <Input id="location" placeholder="City, State, Country" />
+                    <Input id="location" placeholder="City, State, Country" value={location} onChange={(e) => setLocation(e.target.value)} />
                   </div>
 
                   <div className="space-y-2">
@@ -193,8 +201,22 @@ const FarmerOnboarding = () => {
                     <Button variant="outline" onClick={() => setCurrentStep("biometric")}>
                       Back
                     </Button>
-                    <Button onClick={() => setCurrentStep("complete")} className="flex-1">
-                      Complete Profile
+                    <Button
+                      onClick={async () => {
+                        setSubmitting(true); setError(null);
+                        try {
+                          await createMyFarmerProfile({ name: farmName || undefined, phone: phone || undefined, email: email || undefined, location: location || undefined });
+                          setCurrentStep("complete");
+                        } catch (e: any) {
+                          setError(e.message || "Failed to complete onboarding");
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                      className="flex-1"
+                      disabled={submitting}
+                    >
+                      {submitting ? "Saving..." : "Complete Profile"}
                     </Button>
                   </div>
                 </CardContent>

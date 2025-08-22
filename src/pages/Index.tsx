@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, Users, DollarSign, Brain, Package, Vote } from "lucide-react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const Index = () => {
   const epics = [
@@ -61,13 +62,21 @@ const Index = () => {
             Empowering small and medium-scale farmers through ethical financing, AI-powered advisory, 
             transparent supply chains, and decentralized governance.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4 items-center">
             <Button size="lg" className="text-lg">
               Get Started
             </Button>
             <Button variant="outline" size="lg" className="text-lg">
               Learn More
             </Button>
+            <Link to="/auth">
+              <Button variant="secondary" size="lg" className="text-lg">
+                Sign In
+              </Button>
+            </Link>
+            <div className="mt-2">
+              <ConnectButton showBalance={false} chainStatus="icon" />
+            </div>
           </div>
         </div>
 

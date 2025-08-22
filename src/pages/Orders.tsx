@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 import { listMyOrders } from "@/lib/api";
 import { Order } from "@/types";
 import {
@@ -16,6 +17,9 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -32,12 +36,26 @@ const OrdersPage = () => {
     fetchOrders();
   }, []);
 
+  // If redirected from Stripe success with ?order_id=..., jump to detail
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const oid = params.get("order_id");
+    if (oid) {
+      navigate(`/orders/${oid}`, { replace: true });
+    }
+  }, [location.search, navigate]);
+
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (error) {
+    toast({ title: "Orders Error", description: error, variant: "destructive" });
+  }
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">My Orders</h1>
+      {orders.length === 0 && (
+        <div className="text-center text-muted-foreground mb-4">No orders yet.</div>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
