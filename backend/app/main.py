@@ -7,15 +7,29 @@ from .database import init_db
 from .routers import health, farmers, marketplace, finance, ai, supplychain, governance, commerce, users, auth
 
 
-load_dotenv()
+# Ensure we load the .env at backend/.env even if CWD is project root
+_here = os.path.dirname(__file__)
+_backend_env = os.path.abspath(os.path.join(_here, "..", ".env"))
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env)
+else:
+    load_dotenv()
 
 app = FastAPI(title="AgriDAO Backend", version="0.1.0")
 
 cors_origins_env = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,"  # Vite default port
-    "http://localhost:3000,http://127.0.0.1:3000,"  # Create React App default
-    "http://localhost:8000,http://127.0.0.1:8000"   # Common backend port
+    ",".join([
+        # Vite defaults
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        # Common alternative dev port
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+        # Backend itself (if calling from Swagger UI)
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ])
 )
 
 allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]

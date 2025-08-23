@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => ({
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: https:;
         font-src 'self';
-        connect-src 'self' http://localhost:8080 https:;
+        connect-src 'self' http://127.0.0.1:8080 https:;
         frame-src 'self';
         media-src 'self';
         object-src 'none';

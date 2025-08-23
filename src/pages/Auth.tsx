@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { requestOtp, verifyOtp } from "@/lib/api";
+import { requestOtp, verifyOtp, requestMagicLink, startOAuth, verifyMagicLink } from "@/services/auth";
+import { secureStorage } from "@/lib/security";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
 
@@ -44,6 +45,28 @@ export default function Auth() {
     }
   }, [isAuthenticated, navigate, location]);
 
+  // If a magic token is present in the URL (future redirect flow), verify it
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const magicToken = params.get('token');
+    if (magicToken) {
+      (async () => {
+        setIsLoading(true);
+        try {
+          const response = await verifyMagicLink(magicToken);
+          try { secureStorage.set('access_token', response.access_token); } catch {}
+          login({ id: response.user.id, email: response.user.email, role: response.user.role || 'user' });
+          toast({ title: 'Login successful', description: 'Magic link verified.' });
+          navigate('/dashboard', { replace: true });
+        } catch (err) {
+          toast({ title: 'Error', description: 'Magic link invalid or expired.', variant: 'destructive' });
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }
+  }, [location.search, login, navigate, toast]);
+
   // Handle countdown for resend code
   useEffect(() => {
     if (countdown > 0) {
@@ -58,13 +81,18 @@ export default function Auth() {
     
     setIsLoading(true);
     try {
-      await requestOtp(email);
+      const res = await requestOtp(email);
       setStep("verify");
       setCountdown(30); // 30 seconds cooldown
       toast({
         title: "Verification code sent",
         description: `We've sent a 6-digit code to ${email}. Please check your inbox.`,
       });
+      if (import.meta.env.DEV && res?.dev_code) {
+        // Surface dev code to console for local testing
+        // eslint-disable-next-line no-console
+        console.log("[DEV] OTP for", email, "=", res.dev_code);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -83,6 +111,8 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const response = await verifyOtp(email, code) as VerifyOtpResponse;
+      // Persist access token for subsequent API calls
+      try { secureStorage.set('access_token', response.access_token); } catch {}
       login({
         id: response.user.id,
         email: response.user.email,
@@ -125,6 +155,38 @@ export default function Auth() {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to resend code. Please try again.",
         variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Send magic link via Email or WhatsApp
+  const handleMagicLink = async (channel: 'email' | 'whatsapp') => {
+    if (!email) return;
+    setIsLoading(true);
+    try {
+      const res = await requestMagicLink(email, channel);
+      toast({
+        title: channel === 'email' ? 'Magic link sent to Email' : 'Magic link sent via WhatsApp',
+        description: `Use the link to complete sign in.`,
+      });
+      if (import.meta.env.DEV && res?.dev_link) {
+        // Auto-complete sign-in in dev using the returned dev link
+        const tokenParam = new URLSearchParams(res.dev_link.split('?')[1]).get('token');
+        if (tokenParam) {
+          const response = await verifyMagicLink(tokenParam);
+          try { secureStorage.set('access_token', response.access_token); } catch {}
+          login({ id: response.user.id, email: response.user.email, role: response.user.role || 'user' });
+          toast({ title: 'Login successful', description: 'Magic link verified (dev).' });
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send magic link.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -204,17 +266,26 @@ export default function Auth() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" type="button" disabled={isLoading}>
+                <Button variant="outline" type="button" disabled={isLoading} onClick={() => startOAuth('google')}>
                   <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
                   </svg>
                   Google
                 </Button>
-                <Button variant="outline" type="button" disabled={isLoading}>
+                <Button variant="outline" type="button" disabled={isLoading} onClick={() => startOAuth('github')}>
                   <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 0C5.373 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.386-1.332-1.755-1.332-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.834 2.807 1.304 3.492.997.108-.775.42-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.627-5.373-12-12-12z" />
                   </svg>
                   GitHub
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="secondary" type="button" disabled={isLoading || !email} onClick={() => handleMagicLink('email')}>
+                  Send magic link (Email)
+                </Button>
+                <Button variant="secondary" type="button" disabled={isLoading || !email} onClick={() => handleMagicLink('whatsapp')}>
+                  Send magic link (WhatsApp)
                 </Button>
               </div>
             </form>

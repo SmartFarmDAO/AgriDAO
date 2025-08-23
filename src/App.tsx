@@ -9,6 +9,10 @@ import AppLayout from "@/components/layout/AppLayout";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useConfig } from "@/hooks/use-config";
 import { Loader2 } from "lucide-react";
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { config } from '@/config/wagmi';
+import '@rainbow-me/rainbowkit/styles.css';
 
 // Pages
 import Index from "./pages/Index";
@@ -136,21 +140,25 @@ const ConfigProvider: React.FC<WithChildren> = ({ children }) => {
 // Main App Component
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WalletProvider>
-            <AuthProvider>
-              <ConfigProvider>
-                <Toaster />
-                <Sonner />
-                <AppRoutes />
-              </ConfigProvider>
-            </AuthProvider>
-          </WalletProvider>
-        </TooltipProvider>
+        <RainbowKitProvider>
+          <BrowserRouter>
+            <TooltipProvider>
+              <WalletProvider>
+                <AuthProvider>
+                  <ConfigProvider>
+                    <Toaster />
+                    <Sonner />
+                    <AppRoutes />
+                  </ConfigProvider>
+                </AuthProvider>
+              </WalletProvider>
+            </TooltipProvider>
+          </BrowserRouter>
+        </RainbowKitProvider>
       </QueryClientProvider>
-    </BrowserRouter>
+    </WagmiProvider>
   );
 };
 
