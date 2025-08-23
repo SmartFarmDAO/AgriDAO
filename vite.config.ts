@@ -9,7 +9,27 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    },
+    headers: {
+      'Content-Security-Policy': `
+        default-src 'self';
+        script-src 'self' 'unsafe-eval' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        font-src 'self';
+        connect-src 'self' http://localhost:8080 https:;
+        frame-src 'self';
+        media-src 'self';
+        object-src 'none';
+      `.replace(/\s+/g, ' ').trim()
+    }
   },
   plugins: [
     react(),
