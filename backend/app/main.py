@@ -13,10 +13,11 @@ app = FastAPI(title="AgriDAO Backend", version="0.1.0")
 
 cors_origins_env = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:8080,http://127.0.0.1:8080,"
-    "http://localhost:5173,http://127.0.0.1:5173,"
-    "http://localhost:8081,http://localhost:8082,http://localhost:19006",
+    "http://localhost:5173,http://127.0.0.1:5173,"  # Vite default port
+    "http://localhost:3000,http://127.0.0.1:3000,"  # Create React App default
+    "http://localhost:8000,http://127.0.0.1:8000"   # Common backend port
 )
+
 allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
