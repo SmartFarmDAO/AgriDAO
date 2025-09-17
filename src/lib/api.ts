@@ -138,3 +138,20 @@ export const closeProposal = (proposalId: number, outcome: "passed" | "rejected"
 
 // AI API
 export const getAdvice = (crop: string, location: string) => apiPost<{ advice: string[] }>("/ai/advice", { crop, location });
+
+// Create an axios-like API client interface for components that expect it
+export const apiClient = {
+  get: <T = any>(path: string, config?: { params?: Record<string, any> }) => {
+    const query = config?.params ? '?' + new URLSearchParams(config.params).toString() : '';
+    return apiGet<T>(`${path}${query}`).then(data => ({ data }));
+  },
+  post: <T = any>(path: string, data?: any) => {
+    return apiPost<T>(path, data).then(data => ({ data }));
+  },
+  put: <T = any>(path: string, data?: any) => {
+    return apiPut<T>(path, data).then(data => ({ data }));
+  },
+  delete: <T = any>(path: string) => {
+    return apiDelete<T>(path).then(data => ({ data }));
+  }
+};
