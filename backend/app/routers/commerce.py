@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import stripe
 from fastapi import APIRouter, HTTPException, Request, Header, Depends
@@ -10,6 +10,9 @@ from sqlmodel import Session, select
 from ..database import engine
 from ..models import Order, OrderItem, Product, PaymentEvent, User
 from ..deps import get_current_user
+from ..services.checkout_service import CheckoutValidator
+from ..services.cart_service import CartService
+from ..services.payment_service import PaymentService
 
 
 router = APIRouter()
@@ -18,6 +21,11 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 stripe.api_key = STRIPE_SECRET_KEY or None
 
 PLATFORM_FEE_RATE = float(os.getenv("PLATFORM_FEE_RATE", "0.08"))
+
+# Initialize services
+checkout_validator = CheckoutValidator()
+cart_service = CartService()
+payment_service = PaymentService()
 
 
 class CartItem(BaseModel):
@@ -29,6 +37,18 @@ class CreateCheckoutPayload(BaseModel):
     items: List[CartItem]
     success_url: str
     cancel_url: str
+
+
+class CreateCheckoutSessionRequest(BaseModel):
+    cart_id: int
+    shipping_address: Dict[str, Any]
+    success_url: str
+    cancel_url: str
+
+
+class ValidateCheckoutRequest(BaseModel):
+    cart_id: int
+    shipping_address: Optional[Dict[str, Any]] = None
 
 
 @router.post("/checkout_session")
@@ -109,41 +129,358 @@ def create_checkout_session(payload: CreateCheckoutPayload, authorization: Optio
         return {"checkout_url": checkout_session.get("url"), "order_id": order.id}
 
 
+@router.post("/validate_checkout")
+def validate_checkout(
+    request: ValidateCheckoutRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Validate checkout data before creating payment session."""
+    
+    # Validate user eligibility
+    user_validation = checkout_validator.validate_user_eligibility(current_user.id)
+    if not user_validation["valid"]:
+        raise HTTPException(status_code=400, detail=user_validation["message"])
+    
+    # Validate inventory
+    inventory_validation = checkout_validator.validate_inventory(request.cart_id)
+    if not inventory_validation["valid"]:
+        raise HTTPException(status_code=400, detail=inventory_validation)
+    
+    # Validate pricing
+    pricing_validation = checkout_validator.validate_pricing(request.cart_id)
+    if not pricing_validation["valid"]:
+        raise HTTPException(status_code=400, detail=pricing_validation)
+    
+    response = {
+        "valid": True,
+        "pricing": pricing_validation["pricing"],
+        "cart_summary": cart_service.get_cart_summary(request.cart_id)
+    }
+    
+    # Validate shipping address if provided
+    if request.shipping_address:
+        address_validation = checkout_validator.validate_shipping_address(request.shipping_address)
+        if not address_validation["valid"]:
+            response["address_validation"] = address_validation
+        else:
+            response["formatted_address"] = address_validation["formatted_address"]
+    
+    return response
+
+
+@router.post("/checkout_session_v2")
+def create_checkout_session_v2(
+    request: CreateCheckoutSessionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Create checkout session with comprehensive validation."""
+    
+    # Create checkout session with validation
+    session_result = checkout_validator.create_checkout_session(
+        user_id=current_user.id,
+        cart_id=request.cart_id,
+        shipping_address=request.shipping_address
+    )
+    
+    if not session_result["valid"]:
+        raise HTTPException(status_code=400, detail=session_result)
+    
+    checkout_session_data = session_result["checkout_session"]
+    
+    # Get cart items for Stripe
+    cart_items = cart_service.get_cart_items(request.cart_id)
+    
+    if not cart_items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+    
+    # Create Stripe line items
+    line_items = []
+    for item in cart_items:
+        line_items.append({
+            "quantity": item["quantity"],
+            "price_data": {
+                "currency": "usd",
+                "unit_amount": int(item["unit_price"] * 100),
+                "product_data": {"name": item["product_name"]},
+            },
+        })
+    
+    # Add platform fee
+    pricing = checkout_session_data["pricing"]
+    line_items.append({
+        "quantity": 1,
+        "price_data": {
+            "currency": "usd",
+            "unit_amount": int(pricing["platform_fee"] * 100),
+            "product_data": {"name": "Platform Fee"},
+        },
+    })
+    
+    # Add tax
+    if pricing["tax_amount"] > 0:
+        line_items.append({
+            "quantity": 1,
+            "price_data": {
+                "currency": "usd",
+                "unit_amount": int(pricing["tax_amount"] * 100),
+                "product_data": {"name": "Tax"},
+            },
+        })
+    
+    # Create order record
+    with Session(engine) as session:
+        order = Order(
+            buyer_id=current_user.id,
+            subtotal=pricing["subtotal"],
+            platform_fee=pricing["platform_fee"],
+            total=pricing["total"]
+        )
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+        
+        # Add order items
+        for item in cart_items:
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=item["product_id"],
+                quantity=item["quantity"],
+                unit_price=item["unit_price"]
+            )
+            session.add(order_item)
+        
+        session.commit()
+    
+    # Create Stripe checkout session
+    try:
+        stripe_session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=line_items,
+            success_url=f"{request.success_url}?order_id={order.id}&session_id={checkout_session_data['session_id']}",
+            cancel_url=f"{request.cancel_url}?order_id={order.id}&session_id={checkout_session_data['session_id']}",
+            metadata={
+                "order_id": str(order.id),
+                "checkout_session_id": checkout_session_data["session_id"]
+            },
+            customer_email=current_user.email,
+            shipping_address_collection={
+                "allowed_countries": ["US", "CA"]
+            } if not request.shipping_address else None,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create Stripe session: {str(e)}")
+    
+    # Update order with Stripe session ID
+    with Session(engine) as session:
+        order = session.get(Order, order.id)
+        order.stripe_checkout_session_id = stripe_session.id
+        session.add(order)
+        session.commit()
+    
+    return {
+        "checkout_url": stripe_session.url,
+        "order_id": order.id,
+        "checkout_session_id": checkout_session_data["session_id"],
+        "expires_at": checkout_session_data["expires_at"]
+    }
+
+
+@router.get("/checkout_session/{session_id}")
+def get_checkout_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get checkout session data."""
+    session_data = checkout_validator.get_checkout_session(session_id)
+    
+    if not session_data:
+        raise HTTPException(status_code=404, detail="Checkout session not found or expired")
+    
+    # Verify user owns this session
+    if session_data["user_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return session_data
+
+
+@router.post("/checkout_session/{session_id}/validate")
+def validate_checkout_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Re-validate checkout session before payment."""
+    session_data = checkout_validator.get_checkout_session(session_id)
+    
+    if not session_data:
+        raise HTTPException(status_code=404, detail="Checkout session not found or expired")
+    
+    # Verify user owns this session
+    if session_data["user_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Re-validate session
+    validation_result = checkout_validator.validate_checkout_session(session_id)
+    
+    if not validation_result["valid"]:
+        raise HTTPException(status_code=400, detail=validation_result)
+    
+    return validation_result["session_data"]
+
+
+@router.post("/payment_intent")
+def create_payment_intent(
+    request: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """Create payment intent for direct payment processing."""
+    
+    amount = request.get("amount")
+    order_id = request.get("order_id")
+    
+    if not amount:
+        raise HTTPException(status_code=400, detail="Amount is required")
+    
+    try:
+        result = payment_service.create_payment_intent(
+            amount=amount,
+            order_id=order_id,
+            customer_email=current_user.email,
+            metadata={"user_id": str(current_user.id)}
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create payment intent: {str(e)}")
+
+
+@router.get("/payment_intent/{payment_intent_id}")
+def get_payment_intent(
+    payment_intent_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Retrieve payment intent details."""
+    
+    try:
+        result = payment_service.retrieve_payment_intent(payment_intent_id)
+        
+        # Verify user has access to this payment intent
+        metadata = result.get("metadata", {})
+        if metadata.get("user_id") != str(current_user.id):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve payment intent: {str(e)}")
+
+
+@router.post("/payment_intent/{payment_intent_id}/retry")
+def retry_payment(
+    payment_intent_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Retry a failed payment."""
+    
+    try:
+        # First verify user has access
+        payment_details = payment_service.retrieve_payment_intent(payment_intent_id)
+        metadata = payment_details.get("metadata", {})
+        if metadata.get("user_id") != str(current_user.id):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        result = payment_service.retry_failed_payment(payment_intent_id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retry payment: {str(e)}")
+
+
+@router.post("/refund")
+def create_refund(
+    request: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """Create refund for a payment."""
+    
+    payment_intent_id = request.get("payment_intent_id")
+    amount = request.get("amount")  # Optional - full refund if not specified
+    reason = request.get("reason")
+    
+    if not payment_intent_id:
+        raise HTTPException(status_code=400, detail="Payment intent ID is required")
+    
+    try:
+        # Verify user has access to this payment
+        payment_details = payment_service.retrieve_payment_intent(payment_intent_id)
+        metadata = payment_details.get("metadata", {})
+        
+        # Check if user owns the payment or is admin
+        if metadata.get("user_id") != str(current_user.id) and current_user.role.value != "admin":
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        result = payment_service.refund_payment(
+            payment_intent_id=payment_intent_id,
+            amount=amount,
+            reason=reason,
+            metadata={"refunded_by": str(current_user.id)}
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create refund: {str(e)}")
+
+
+@router.get("/payment_methods")
+def get_supported_payment_methods():
+    """Get list of supported payment methods."""
+    
+    return {
+        "payment_methods": [
+            {
+                "type": "card",
+                "name": "Credit/Debit Card",
+                "supported_brands": ["visa", "mastercard", "amex", "discover"],
+                "enabled": True
+            },
+            {
+                "type": "ach_debit",
+                "name": "Bank Transfer (ACH)",
+                "description": "Direct bank account transfer",
+                "enabled": False  # Enable when ready
+            },
+            {
+                "type": "apple_pay",
+                "name": "Apple Pay",
+                "description": "Pay with Apple Pay",
+                "enabled": False  # Enable when configured
+            },
+            {
+                "type": "google_pay",
+                "name": "Google Pay",
+                "description": "Pay with Google Pay",
+                "enabled": False  # Enable when configured
+            }
+        ]
+    }
+
+
 @router.post("/stripe_webhook")
 async def stripe_webhook(request: Request):
+    """Enhanced Stripe webhook handler with comprehensive event processing."""
     raw_body = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    event = None
-
+    sig_header = request.headers.get("stripe-signature", "")
+    
     try:
-        if endpoint_secret:
-            event = stripe.Webhook.construct_event(
-                payload=raw_body, sig_header=sig_header, secret=endpoint_secret
-            )
-        else:
-            # Fallback: parse as JSON
-            event = stripe.Event.construct_from(await request.json(), stripe.api_key)  # type: ignore[arg-type]
-    except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=400, detail=str(e))
-
-    with Session(engine) as session:
-        event_type = event["type"]
-        data = event["data"]["object"]
-        order_id = int(data.get("metadata", {}).get("order_id", 0)) if isinstance(data, dict) else 0
-        session.add(PaymentEvent(order_id=order_id, type=event_type, payload=str(event)))
-        session.commit()
-
-        if event_type == "checkout.session.completed":
-            # mark order paid
-            order = session.get(Order, order_id)
-            if order:
-                order.payment_status = "paid"
-                order.stripe_payment_intent_id = data.get("payment_intent") if isinstance(data, dict) else None
-                session.add(order)
-                session.commit()
-
-    return {"received": True}
+        result = payment_service.handle_webhook_event(raw_body, sig_header)
+        return {"received": True, "processed": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
 
 
 @router.get("/orders")

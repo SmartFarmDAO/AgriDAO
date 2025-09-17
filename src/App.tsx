@@ -29,6 +29,7 @@ import Governance from "./pages/Governance";
 import AI from "./pages/AI";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Initialize query client
 const queryClient = new QueryClient({
@@ -93,6 +94,7 @@ const AppRoutes: React.FC = () => {
           <Route path="supply-chain" element={<SupplyChain />} />
           <Route path="governance" element={<Governance />} />
           <Route path="ai" element={<AI />} />
+          <Route path="admin" element={<AdminDashboard />} />
         </Route>
         
         {/* 404 - Not Found */}

@@ -1,0 +1,153 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      name: 'Warm up'
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 10
+      name: 'Ramp up load'
+    - duration: 300
+      arrivalRate: 10
+      name: 'Sustained load'
+    - duration: 60
+      arrivalRate: 20
+      name: 'Peak load'
+  
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+  thresholds:
+    http.response_time.p99: 1000
+    http.response_time.p95: 500
+    http.request_rate: 100
+    http.errors.4xx: 1
+    http.errors.5xx: 0
+
+scenarios:
+  - name: 'Browse marketplace'
+    weight: 40
+    flow:
+      - get:
+          url: '/'
+      - think: 2
+      - get:
+          url: '/marketplace'
+      - think: 3
+      - get:
+          url: '/api/products?limit=20&offset=0'
+      - think: 2
+
+  - name: 'User registration and login'
+    weight: 20
+    flow:
+      - post:
+          url: '/api/auth/register'
+          json:
+            email: 'user{{ $randomInt(1, 100000) }}@test.com'
+            password: 'Test123!'
+            name: 'Test User {{ $randomInt(1, 1000) }}'
+      - think: 1
+      - post:
+          url: '/api/auth/login'
+          json:
+            email: 'user{{ $randomInt(1, 100000) }}@test.com'
+            password: 'Test123!'
+      - think: 1
+
+  - name: 'Product search'
+    weight: 15
+    flow:
+      - get:
+          url: '/marketplace'
+      - think: 2
+      - get:
+          url: '/api/products/search?q=organic&limit=10'
+      - think: 1
+      - get:
+          url: '/api/products/search?q=fresh&limit=10'
+      - think: 1
+
+  - name: 'Add to cart and checkout'
+    weight: 15
+    flow:
+      - post:
+          url: '/api/auth/login'
+          json:
+            email: 'buyer@test.com'
+            password: 'Test123!'
+      - think: 1
+      - post:
+          url: '/api/cart/add'
+          json:
+            productId: '{{ $randomInt(1, 100) }}'
+            quantity: '{{ $randomInt(1, 5) }}'
+      - think: 2
+      - get:
+          url: '/api/cart'
+      - think: 1
+      - post:
+          url: '/api/orders/create'
+          json:
+            items:
+              - productId: '{{ $randomInt(1, 100) }}'
+                quantity: 2
+      - think: 3
+
+  - name: 'Farmer operations'
+    weight: 10
+    flow:
+      - post:
+          url: '/api/auth/login'
+          json:
+            email: 'farmer@test.com'
+            password: 'Test123!'
+      - think: 1
+      - post:
+          url: '/api/products'
+          json:
+            name: 'Load Test Product {{ $randomInt(1, 1000) }}'
+            price: '{{ $randomFloat(1, 100) }}'
+            quantity: '{{ $randomInt(10, 100) }}'
+            description: 'Load test product description'
+            category: 'vegetables'
+      - think: 2
+      - get:
+          url: '/api/farmer/products'
+      - think: 1
+
+  - name: 'Image upload stress test'
+    weight: 5
+    flow:
+      - post:
+          url: '/api/auth/login'
+          json:
+            email: 'farmer@test.com'
+            password: 'Test123!'
+      - think: 1
+      - post:
+          url: '/api/upload/image'
+          headers:
+            content-type: 'multipart/form-data'
+          formData:
+            image:
+              file: './test-images/test-product.jpg'
+      - think: 5
+
+  - name: 'WebSocket real-time updates'
+    weight: 5
+    flow:
+      - get:
+          url: '/ws/notifications'
+          headers:
+            Authorization: 'Bearer test-token'
+      - think: 2
+      - send:
+          channel: 'notifications'
+          data:
+            type: 'price_update'
+            productId: '{{ $randomInt(1, 100) }}'
+            newPrice: '{{ $randomFloat(1, 100) }}'
+      - think: 3

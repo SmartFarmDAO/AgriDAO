@@ -2,9 +2,26 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import IntegrityError
 
 from .database import init_db
-from .routers import health, farmers, marketplace, finance, ai, supplychain, governance, commerce, users, auth
+from .core.logging import CorrelationIdMiddleware, setup_logging
+from .routers import health, farmers, marketplace, finance, ai, supplychain, governance, commerce, users, auth, cart, notifications, orders, disputes, analytics
+from .middleware.security import (
+    XSSProtectionMiddleware, 
+    CSRFProtectionMiddleware, 
+    SecurityHeadersMiddleware,
+    RateLimitMiddleware,
+    set_csrf_middleware
+)
+from .services.redis_service import redis_service
+from .middleware.error_handlers import (
+    validation_exception_handler,
+    http_exception_handler,
+    integrity_error_handler,
+    general_exception_handler
+)
 
 
 # Ensure we load the .env at backend/.env even if CWD is project root
@@ -17,6 +34,25 @@ else:
 
 app = FastAPI(title="AgriDAO Backend", version="0.1.0")
 
+# Setup structured logging
+setup_logging(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    log_file=os.getenv("LOG_FILE")
+)
+
+# Correlation ID middleware (first to ensure correlation IDs are set)
+app.add_middleware(CorrelationIdMiddleware)
+
+# Security middleware
+csrf_middleware = CSRFProtectionMiddleware(app)
+set_csrf_middleware(csrf_middleware)
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(XSSProtectionMiddleware)
+app.add_middleware(CSRFProtectionMiddleware)
+
+# CORS middleware (after security middleware)
 cors_origins_env = os.getenv(
     "CORS_ORIGINS",
     ",".join([
@@ -42,10 +78,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Exception handlers
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
 
 @app.on_event("startup")
-def on_startup() -> None:
+async def on_startup() -> None:
     init_db()
+    await redis_service.connect()
+
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    await redis_service.disconnect()
 
 
 app.include_router(health.router)
@@ -58,5 +105,10 @@ app.include_router(governance.router, prefix="/governance", tags=["governance"])
 app.include_router(commerce.router, prefix="/commerce", tags=["commerce"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(cart.router, prefix="/api", tags=["cart"])
+app.include_router(notifications.router, prefix="/api", tags=["notifications"])
+app.include_router(orders.router, prefix="/api", tags=["orders"])
+app.include_router(disputes.router, prefix="/api", tags=["disputes"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 
 

@@ -1,0 +1,61 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - link "AgriDAO" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10] [cursor=pointer]: AgriDAO
+        - navigation [ref=e11]:
+          - link "Marketplace" [ref=e12] [cursor=pointer]:
+            - /url: /marketplace
+          - link "Finance" [ref=e13] [cursor=pointer]:
+            - /url: /finance
+          - link "Supply Chain" [ref=e14] [cursor=pointer]:
+            - /url: /supply-chain
+          - link "Governance" [ref=e15] [cursor=pointer]:
+            - /url: /governance
+          - link "AI Assistant New" [ref=e16] [cursor=pointer]:
+            - /url: /ai
+            - generic [ref=e17] [cursor=pointer]:
+              - text: AI Assistant
+              - generic [ref=e18] [cursor=pointer]: New
+        - generic [ref=e19]:
+          - generic [ref=e21]:
+            - searchbox "Search products, farms..." [ref=e22]
+            - img [ref=e23]
+          - button "Cart" [ref=e25] [cursor=pointer]:
+            - img
+            - generic [ref=e26] [cursor=pointer]: Cart
+          - button "Sign In" [ref=e27] [cursor=pointer]:
+            - generic [ref=e28] [cursor=pointer]: Sign In
+    - main [ref=e29]:
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - img [ref=e35]
+          - heading "Welcome to AgriDAO" [level=3] [ref=e38]
+          - paragraph [ref=e39]: Sign in with your email to continue
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: Email address
+            - textbox "Email address" [ref=e44]: newuser@test.com
+          - button "Continue with Email" [ref=e45] [cursor=pointer]
+          - generic [ref=e50]: Or continue with
+          - generic [ref=e51]:
+            - button "Google" [ref=e52] [cursor=pointer]:
+              - img
+              - text: Google
+            - button "GitHub" [ref=e53] [cursor=pointer]:
+              - img
+              - text: GitHub
+          - generic [ref=e54]:
+            - button "Send magic link (Email)" [ref=e55] [cursor=pointer]
+            - button "Send magic link (WhatsApp)" [ref=e56] [cursor=pointer]
+        - paragraph [ref=e58]: By continuing, you agree to our Terms of Service and Privacy Policy.
+    - region "Notifications (F8)":
+      - list
+```

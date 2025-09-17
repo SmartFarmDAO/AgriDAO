@@ -6,33 +6,42 @@ import base64
 import secrets
 from typing import Dict, Optional
 
-import jwt
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
 from ..database import engine
-from ..models import User
+from ..models import User, UserRole
+from ..services.auth import token_manager
+from ..deps import get_current_user
+from ..middleware.security import get_csrf_middleware
 
 
 router = APIRouter()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "devsecret")
-JWT_ALG = "HS256"
 
 # In-memory OTP store for MVP (replace with Redis later)
 otp_store: Dict[str, Dict[str, float]] = {}
 
 
 class OTPRequest(BaseModel):
-    email: str
+    email: EmailStr
 
 
 class OTPVerify(BaseModel):
-    email: str
+    email: EmailStr
     code: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
 
 
 def _generate_otp() -> str:
@@ -78,28 +87,42 @@ def request_otp(payload: OTPRequest):
 
 
 @router.post("/otp/verify")
-def verify_otp(payload: OTPVerify):
+def verify_otp(request: Request, payload: OTPVerify):
     record = otp_store.get(payload.email)
     if not record or record["exp"] < time.time() or record["code"] != payload.code:
         raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    # Clean up used OTP
+    del otp_store[payload.email]
 
     # upsert user
     with Session(engine) as session:
         user = session.exec(select(User).where(User.email == payload.email)).first()
         if not user:
-            user = User(role="buyer", name=payload.email.split("@")[0], email=payload.email)
+            user = User(
+                role=UserRole.BUYER, 
+                name=payload.email.split("@")[0], 
+                email=payload.email,
+                email_verified=True
+            )
             session.add(user)
             session.commit()
             session.refresh(user)
+        else:
+            # Mark email as verified
+            user.email_verified = True
+            session.add(user)
+            session.commit()
 
-    # issue JWT
-    now = int(time.time())
-    token = jwt.encode({"sub": str(user.id), "role": user.role, "iat": now, "exp": now + 86400}, JWT_SECRET, algorithm=JWT_ALG)
-    return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "role": user.role}}
+    # Create tokens using TokenManager
+    user_agent = request.headers.get("user-agent")
+    ip_address = request.client.host if request.client else None
+    
+    return token_manager.create_tokens(user, user_agent, ip_address)
 
 
 class MagicRequest(BaseModel):
-    email: str
+    email: EmailStr
     channel: str = "email"  # 'email' or 'whatsapp'
 
 
@@ -114,7 +137,7 @@ def magic_request(payload: MagicRequest):
 
 
 @router.get("/magic/verify")
-def magic_verify(token: str = Query(...)):
+def magic_verify(request: Request, token: str = Query(...)):
     email = _verify_magic(token)
     if not email:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
@@ -123,14 +146,26 @@ def magic_verify(token: str = Query(...)):
     with Session(engine) as session:
         user = session.exec(select(User).where(User.email == email)).first()
         if not user:
-            user = User(role="buyer", name=email.split("@")[0], email=email)
+            user = User(
+                role=UserRole.BUYER, 
+                name=email.split("@")[0], 
+                email=email,
+                email_verified=True
+            )
             session.add(user)
             session.commit()
             session.refresh(user)
+        else:
+            # Mark email as verified
+            user.email_verified = True
+            session.add(user)
+            session.commit()
 
-    now = int(time.time())
-    jwt_token = jwt.encode({"sub": str(user.id), "role": user.role, "iat": now, "exp": now + 86400}, JWT_SECRET, algorithm=JWT_ALG)
-    return {"access_token": jwt_token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "role": user.role}}
+    # Create tokens using TokenManager
+    user_agent = request.headers.get("user-agent")
+    ip_address = request.client.host if request.client else None
+    
+    return token_manager.create_tokens(user, user_agent, ip_address)
 
 
 @router.get("/oauth/{provider}/start")
@@ -180,5 +215,63 @@ def oauth_callback(provider: str, code: str = Query(...), state: Optional[str] =
     # TODO: Validate state using server-side session or store; omitted for MVP.
     # For now, indicate that the token exchange step is pending implementation.
     raise HTTPException(status_code=501, detail="OAuth callback not implemented yet. I will exchange the code for tokens next.")
+
+
+@router.post("/refresh")
+def refresh_token(payload: RefreshTokenRequest):
+    """Refresh access token using refresh token."""
+    result = token_manager.refresh_access_token(payload.refresh_token)
+    if not result:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    return result
+
+
+@router.post("/logout")
+def logout(request: Request, payload: LogoutRequest, current_user: User = Depends(get_current_user)):
+    """Logout user and revoke tokens."""
+    # Get access token from header
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        access_token = authorization.split(" ", 1)[1]
+        token_manager.revoke_token(access_token)
+    
+    # Revoke refresh token if provided
+    if payload.refresh_token:
+        token_manager.revoke_token(payload.refresh_token)
+    
+    return {"message": "Successfully logged out"}
+
+
+@router.post("/logout-all")
+def logout_all(current_user: User = Depends(get_current_user)):
+    """Logout user from all devices."""
+    token_manager.revoke_all_user_sessions(current_user.id)
+    return {"message": "Successfully logged out from all devices"}
+
+
+@router.get("/me")
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get current user information."""
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "role": current_user.role.value,
+        "email_verified": current_user.email_verified,
+        "phone_verified": current_user.phone_verified,
+        "status": current_user.status.value,
+        "created_at": current_user.created_at
+    }
+
+
+@router.get("/csrf-token")
+def get_csrf_token():
+    """Get CSRF token for state-changing operations."""
+    csrf_middleware = get_csrf_middleware()
+    if csrf_middleware:
+        token = csrf_middleware.generate_csrf_token()
+        return {"csrf_token": token}
+    else:
+        raise HTTPException(status_code=500, detail="CSRF protection not available")
 
 

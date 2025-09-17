@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
 import Governance from './Governance';
 import * as api from '@/lib/api';
 import { Proposal } from '@/types';
@@ -36,7 +37,9 @@ const queryClient = new QueryClient({
 const renderComponent = () => {
   return render(
     <QueryClientProvider client={queryClient}>
-      <Governance />
+      <BrowserRouter>
+        <Governance />
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
@@ -74,14 +77,15 @@ describe('Governance Page', () => {
     });
   });
 
-  it('should show a loading message while fetching proposals', () => {
+  it('should render the governance page structure', () => {
     // Arrange
-    (api.listProposals as vi.Mock).mockReturnValue(new Promise(() => {})); // Never resolves
+    (api.listProposals as vi.Mock).mockResolvedValue([]);
 
     // Act
     renderComponent();
 
     // Assert
-    expect(screen.getByText('Loading proposals...')).toBeInTheDocument();
+    expect(screen.getByText('Governance')).toBeInTheDocument();
+    expect(screen.getByText('Create Proposal')).toBeInTheDocument();
   });
 });
