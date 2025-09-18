@@ -191,7 +191,7 @@ npm run analyze            # Bundle size analysis
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-org/agridao.git
+git clone https://github.com/SmartFarmDAO/AgriDAO.git
 cd agridao
 ```
 
@@ -559,10 +559,10 @@ npm run build               # Verify production build
 ## 📞 Production Support
 
 ### Development & Technical Support
-- **Documentation**: [docs.agridao.com](https://docs.agridao.com) - Complete API and user documentation
+- **Documentation**: [docs.agridao.com](https://docs.your-domain.com) - Complete API and user documentation
 - **GitHub Issues**: [GitHub Repository](https://github.com/your-org/agridao/issues) - Bug reports and feature requests
 - **Developer Discord**: [AgriDAO Dev Community](https://discord.gg/agridao-dev) - Technical discussions
-- **API Documentation**: [api.agridao.com](https://api.agridao.com) - Interactive API explorer
+- **API Documentation**: [api.agridao.com](https://api.your-domain.com) - Interactive API explorer
 
 ### Production Support
 - **24/7 Support**: support@agridao.com - Production issue escalation
