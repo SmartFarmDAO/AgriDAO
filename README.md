@@ -556,13 +556,32 @@ npm run build               # Verify production build
 - **Slow networks**: Optimized for 3G and poor connectivity
 - **Accessibility**: WCAG 2.1 AA compliance across all browsers
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the `/docs` directory:
+
+### 🚀 **Quick Start**
+- **[Getting Started](./docs/getting-started/README.md)** - Installation and setup
+- **[User Guide](./docs/user-guide/README.md)** - Complete user documentation
+- **[API Documentation](./docs/api/README.md)** - Developer API reference
+
+### 🛠️ **Technical Documentation**
+- **[Architecture](./docs/development/architecture.md)** - System design and components
+- **[Testing Guide](./docs/development/testing.md)** - Testing procedures and best practices
+- **[Deployment](./docs/operations/deployment-guide.md)** - Production deployment procedures
+
+### 📋 **Project Documentation**
+- **[Requirements](./docs/project/requirements.md)** - Functional and technical requirements
+- **[Roadmap](./docs/project/roadmap.md)** - Future development plans and milestones
+- **[Design Decisions](./docs/project/design-decisions.md)** - Architectural choices and rationale
+
 ## 📞 Production Support
 
 ### Development & Technical Support
-- **Documentation**: [docs.agridao.com](https://docs.your-domain.com) - Complete API and user documentation
-- **GitHub Issues**: [GitHub Repository](https://github.com/your-org/agridao/issues) - Bug reports and feature requests
+- **Documentation**: [./docs/README.md](./docs/README.md) - Complete documentation index
+- **GitHub Issues**: [GitHub Repository](https://github.com/SmartFarmDAO/AgriDAO/issues) - Bug reports and feature requests
 - **Developer Discord**: [AgriDAO Dev Community](https://discord.gg/agridao-dev) - Technical discussions
-- **API Documentation**: [api.agridao.com](https://api.your-domain.com) - Interactive API explorer
+- **API Documentation**: [API Reference](./docs/api/README.md) - Interactive API explorer
 
 ### Production Support
 - **24/7 Support**: support@agridao.com - Production issue escalation
