@@ -24,6 +24,8 @@ dist-ssr/
 .env.development
 .env.test
 .env.production
+backend/.env*
+backend/.env
 
 # Editor directories and files
 .vscode/*
@@ -62,6 +64,9 @@ wheels/
 # Database
 *.sqlite
 *.sqlite3
+*.db
+backend/*.db
+backend/agri.db
 
 # Local development
 .vercel
@@ -82,3 +87,27 @@ secrets/
 *.key
 *.crt
 *.cert
+
+# Development and build artifacts
+.mypy_cache/
+.pytest_cache/
+playwright-report/
+test-results/
+test_uploads/
+uploads/
+backend/test_uploads/
+backend/uploads/
+backend/.venv/
+backend/.pytest_cache/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
