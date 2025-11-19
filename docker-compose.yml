@@ -10,6 +10,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - agridao-dev
 
   redis:
     image: redis:7-alpine
@@ -19,13 +21,13 @@ services:
     volumes:
       - redisdata:/data
     command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - agridao-dev
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    env_file:
-      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/agridb
       - REDIS_URL=redis://redis:6379/0
@@ -34,10 +36,43 @@ services:
       - redis
     ports:
       - "8000:8000"
-    # Uncomment to run under a debugger or override the default CMD
-    # command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    networks:
+      - agridao-dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - agridao-dev
+    stdin_open: true
+    tty: true
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - agridao-dev
 
 volumes:
   pgdata:
   redisdata:
+
+networks:
+  agridao-dev:
+    driver: bridge
 

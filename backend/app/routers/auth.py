@@ -15,6 +15,7 @@ from sqlmodel import Session, select
 from ..database import engine
 from ..models import User, UserRole
 from ..services.auth import token_manager
+from ..services.otp_service import otp_service
 from ..deps import get_current_user
 from ..middleware.security import get_csrf_middleware
 
@@ -22,9 +23,6 @@ from ..middleware.security import get_csrf_middleware
 router = APIRouter()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "devsecret")
-
-# In-memory OTP store for MVP (replace with Redis later)
-otp_store: Dict[str, Dict[str, float]] = {}
 
 
 class OTPRequest(BaseModel):
@@ -78,22 +76,32 @@ def _verify_magic(token: str) -> Optional[str]:
 
 @router.post("/otp/request")
 def request_otp(payload: OTPRequest):
-    code = _generate_otp()
-    expires_at = time.time() + 300  # 5 minutes
-    otp_store[payload.email] = {"code": code, "exp": expires_at}
-
-    # TODO: integrate email/SMS provider; for now return code in response for dev
-    return {"sent": True, "dev_code": code}
+    """Request OTP via email"""
+    result = otp_service.send_otp_email(payload.email)
+    
+    if result["success"]:
+        return {
+            "sent": True,
+            "expires_in": result["expires_in"]
+        }
+    else:
+        # Fallback for development
+        code = otp_service.generate_otp()
+        otp_service.otp_store[payload.email] = {
+            "code": code,
+            "exp": time.time() + 300,
+            "attempts": 0
+        }
+        return {"sent": True, "dev_code": code}
 
 
 @router.post("/otp/verify")
 def verify_otp(request: Request, payload: OTPVerify):
-    record = otp_store.get(payload.email)
-    if not record or record["exp"] < time.time() or record["code"] != payload.code:
-        raise HTTPException(status_code=400, detail="Invalid or expired code")
-
-    # Clean up used OTP
-    del otp_store[payload.email]
+    """Verify OTP code"""
+    result = otp_service.verify_otp(payload.email, payload.code)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error", "Invalid or expired code"))
 
     # upsert user
     with Session(engine) as session:
@@ -113,12 +121,13 @@ def verify_otp(request: Request, payload: OTPVerify):
             user.email_verified = True
             session.add(user)
             session.commit()
-
-    # Create tokens using TokenManager
-    user_agent = request.headers.get("user-agent")
-    ip_address = request.client.host if request.client else None
-    
-    return token_manager.create_tokens(user, user_agent, ip_address)
+            session.refresh(user)
+        
+        # Create tokens using TokenManager (inside session to avoid detached instance)
+        user_agent = request.headers.get("user-agent")
+        ip_address = request.client.host if request.client else None
+        
+        return token_manager.create_tokens(user, user_agent, ip_address)
 
 
 class MagicRequest(BaseModel):

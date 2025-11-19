@@ -23,13 +23,22 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+# Create non-root user first
+RUN useradd --create-home --shell /bin/bash app
+
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+# Create log directory and set proper permissions
+RUN mkdir -p /var/log/agridao \
+    && chown -R app:app /var/log/agridao /app \
+    && chmod 755 /var/log/agridao
+
+# Switch to non-root user
 USER app
+
+# Set the working directory
+WORKDIR /app
 
 # Expose port
 EXPOSE 8000

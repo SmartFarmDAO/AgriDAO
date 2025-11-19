@@ -100,6 +100,11 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             request.url.path.startswith("/auth/oauth/")):
             return await call_next(request)
         
+        # Skip CSRF for requests with Bearer token (API authentication)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            return await call_next(request)
+        
         # Check for CSRF token in headers
         csrf_token = request.headers.get("X-CSRF-Token")
         if not csrf_token or not self._is_valid_csrf_token(csrf_token):

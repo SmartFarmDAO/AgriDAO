@@ -197,22 +197,28 @@ cd agridao
 
 2. **Install dependencies**
 ```bash
+cd frontend
 npm install
 ```
 
 3. **Set up development environment**
 ```bash
+# Frontend environment
 cp .env.example .env
-cp backend/.env.example backend/.env
-# Edit environment files with your configuration
+# Edit .env with your configuration
+
+# Backend environment
+cd ../backend
+cp .env.example .env
+# Edit backend/.env with your configuration
 ```
 
 4. **Start development environment**
 ```bash
-# Frontend development server
+# Frontend development server (from frontend directory)
 npm run dev                 # Starts on http://localhost:5173
 
-# Backend services (in separate terminal)
+# Backend services (from project root in separate terminal)
 cd backend
 docker-compose up --build   # Starts backend on http://localhost:8000
 ```
@@ -222,8 +228,11 @@ docker-compose up --build   # Starts backend on http://localhost:8000
 # Run health checks
 curl http://localhost:8000/health
 
-# Run comprehensive tests
+# Run comprehensive tests (from frontend directory)
+cd frontend
 npm run test:e2e
+
+# Run backend tests (from project root)
 ./scripts/integration-test.sh
 ```
 
@@ -245,7 +254,7 @@ docker-compose -f docker-compose.prod.yml logs -f
 
 ### Environment Variables
 
-#### Frontend (.env)
+#### Frontend (frontend/.env)
 ```bash
 VITE_API_URL=http://localhost:8000
 VITE_FIREBASE_API_KEY=your-firebase-key
@@ -288,70 +297,58 @@ PROMETHEUS_ENABLED=true
 
 ```
 AgriDAO/ (Production-Ready Architecture)
-├── src/
-│   ├── components/              # Production UI components
-│   │   ├── layout/             # Layout components (AppLayout, etc.)
-│   │   ├── ui/                 # Radix UI components (50+ components)
-│   │   ├── AppHeader.tsx       # Main navigation header
-│   │   ├── CartButton.tsx      # Shopping cart integration
-│   │   ├── FileManager.tsx     # Multi-cloud file management
-│   │   ├── MobileOptimizedLayout.tsx # PWA-optimized layouts
-│   │   ├── NotificationSettings.tsx  # Push notification management
-│   │   ├── OfflineStatus.tsx   # Network connectivity indicator
-│   │   ├── PrivacyDashboard.tsx # GDPR/CCPA compliance UI
-│   │   ├── SecurityDashboard.tsx # Security monitoring interface
-│   │   └── UserMenu.tsx        # Role-based user menu
-│   ├── pages/                  # Production route pages
-│   │   ├── AdminDashboard.tsx  # Full admin management interface
-│   │   ├── AdminAnalytics.tsx  # Advanced analytics dashboard
-│   │   ├── Auth.tsx           # Authentication flows
-│   │   ├── Dashboard.tsx      # User-specific dashboards
-│   │   ├── FarmerOnboarding.tsx # Farmer registration workflow
-│   │   ├── Finance.tsx        # Financial management
-│   │   ├── Governance.tsx     # DAO governance interface
-│   │   ├── Marketplace.tsx    # Main marketplace
-│   │   ├── Orders.tsx         # Order management
-│   │   ├── Profile.tsx        # User profile management
-│   │   ├── SupplyChain.tsx    # Supply chain tracking
-│   │   └── UserManagement.tsx # User administration
-│   ├── hooks/                  # Production-ready custom hooks
-│   │   ├── use-auth.tsx       # Authentication state management
-│   │   ├── use-config.ts      # Configuration management
-│   │   ├── use-mobile.tsx     # Mobile-specific functionality
-│   │   ├── useMobileOptimization.ts # PWA optimizations
-│   │   └── useOfflineSync.ts  # Offline synchronization
-│   ├── lib/                    # Enterprise utility functions
-│   │   ├── api.ts            # API client with retry logic
-│   │   ├── security.ts       # Security utilities and encryption
-│   │   └── utils.ts          # General utilities
-│   ├── services/               # Business logic services
-│   │   └── auth.ts           # Authentication service
-│   ├── config/                # Configuration management
-│   │   ├── api.ts            # API configuration
-│   │   └── wagmi.ts          # Web3/blockchain configuration
-│   ├── utils/                 # Production utilities
-│   │   ├── api-client.ts     # HTTP client with interceptors
-│   │   ├── pwa.ts           # PWA functionality
-│   │   └── security.ts      # Security implementations
-│   └── test/                  # Comprehensive test suite
-│       ├── components/       # Component tests
-│       ├── utils/           # Utility tests and test helpers
-│       └── setup.ts         # Test environment configuration
-├── e2e/                       # End-to-end test suites
-├── backend/                   # FastAPI backend (separate deployment)
-├── mobile/                    # React Native mobile app (future)
-├── scripts/                   # Production deployment scripts
-│   ├── deploy.sh             # Blue-green deployment automation
-│   └── integration-test.sh   # System integration testing
-├── public/                    # Static assets and PWA files
-│   ├── manifest.json         # PWA manifest
-│   ├── sw.js                # Service worker
-│   └── offline.html         # Offline fallback page
-├── docs/                      # Comprehensive documentation
-├── docker-compose.prod.yml    # Production Docker stack
-├── Dockerfile.prod           # Production container image
-├── nginx.conf               # Production Nginx configuration
-└── prometheus.yml           # Monitoring configuration
+├── frontend/                  # React frontend application
+│   ├── src/
+│   │   ├── components/       # Production UI components
+│   │   │   ├── layout/      # Layout components (AppLayout, etc.)
+│   │   │   ├── ui/          # Radix UI components (50+ components)
+│   │   │   ├── AppHeader.tsx       # Main navigation header
+│   │   │   ├── CartButton.tsx      # Shopping cart integration
+│   │   │   ├── FileManager.tsx     # Multi-cloud file management
+│   │   │   ├── MobileOptimizedLayout.tsx # PWA-optimized layouts
+│   │   │   ├── NotificationSettings.tsx  # Push notification management
+│   │   │   ├── OfflineStatus.tsx   # Network connectivity indicator
+│   │   │   ├── PrivacyDashboard.tsx # GDPR/CCPA compliance UI
+│   │   │   ├── SecurityDashboard.tsx # Security monitoring interface
+│   │   │   └── UserMenu.tsx        # Role-based user menu
+│   │   ├── pages/           # Production route pages
+│   │   │   ├── AdminDashboard.tsx  # Full admin management interface
+│   │   │   ├── AdminAnalytics.tsx  # Advanced analytics dashboard
+│   │   │   ├── Auth.tsx           # Authentication flows
+│   │   │   ├── Dashboard.tsx      # User-specific dashboards
+│   │   │   ├── FarmerOnboarding.tsx # Farmer registration workflow
+│   │   │   ├── Finance.tsx        # Financial management
+│   │   │   ├── Governance.tsx     # DAO governance interface
+│   │   │   ├── Marketplace.tsx    # Main marketplace
+│   │   │   ├── Orders.tsx         # Order management
+│   │   │   ├── Profile.tsx        # User profile management
+│   │   │   ├── SupplyChain.tsx    # Supply chain tracking
+│   │   │   └── UserManagement.tsx # User administration
+│   │   ├── hooks/           # Production-ready custom hooks
+│   │   ├── lib/             # Enterprise utility functions
+│   │   ├── services/        # Business logic services
+│   │   ├── config/          # Configuration management
+│   │   ├── utils/           # Production utilities
+│   │   └── test/            # Comprehensive test suite
+│   ├── e2e/                 # End-to-end test suites
+│   ├── public/              # Static assets and PWA files
+│   │   ├── manifest.json    # PWA manifest
+│   │   ├── sw.js           # Service worker
+│   │   └── offline.html    # Offline fallback page
+│   ├── index.html           # Entry HTML
+│   ├── package.json         # Frontend dependencies
+│   ├── vite.config.ts       # Vite configuration
+│   └── README.md            # Frontend documentation
+├── backend/                 # FastAPI backend (separate deployment)
+├── mobile/                  # React Native mobile app (future)
+├── scripts/                 # Production deployment scripts
+│   ├── deploy.sh           # Blue-green deployment automation
+│   └── integration-test.sh # System integration testing
+├── docs/                    # Comprehensive documentation
+├── docker-compose.yml       # Development Docker stack
+├── docker-compose.prod.yml  # Production Docker stack
+├── nginx.conf              # Production Nginx configuration
+└── prometheus.yml          # Monitoring configuration
 ```
 
 ## 🎯 Production Component Architecture
@@ -388,7 +385,7 @@ AgriDAO/ (Production-Ready Architecture)
 
 ### Available Scripts (Production Ready)
 ```bash
-# Development workflow
+# Development workflow (from frontend directory)
 npm run dev          # Start development server with hot reload
 npm run build        # Production-optimized build with tree shaking
 npm run preview      # Preview production build locally
@@ -410,7 +407,7 @@ npm run format      # Prettier code formatting
 npm run typecheck   # Strict TypeScript checking
 npm run analyze     # Bundle analysis and optimization
 
-# Production deployment
+# Production deployment (from project root)
 ./scripts/deploy.sh deploy production    # Blue-green deployment
 ./scripts/integration-test.sh           # System integration tests
 docker-compose -f docker-compose.prod.yml up  # Production stack
@@ -430,6 +427,7 @@ docker-compose -f docker-compose.prod.yml up  # Production stack
 ```bash
 # Setup development environment
 git checkout -b feature/your-feature-name
+cd frontend
 npm install
 npm run dev
 
@@ -440,7 +438,9 @@ npm run test:security       # Security validation
 npm run lint                # Code quality checks
 
 # Production readiness check
+cd ..
 ./scripts/integration-test.sh
+cd frontend
 npm run build               # Verify production build
 ```
 

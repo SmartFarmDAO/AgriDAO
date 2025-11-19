@@ -61,8 +61,8 @@ def register_farmer(
 
         # Promote user role to 'farmer' upon successful onboarding (MVP behavior)
         db_user = session.get(User, current_user.id)
-        if db_user and db_user.role != "farmer":
-            db_user.role = "farmer"
+        if db_user and db_user.role.lower() != "farmer":
+            db_user.role = "FARMER"
             session.add(db_user)
             session.commit()
 
