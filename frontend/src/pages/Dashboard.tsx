@@ -6,11 +6,23 @@ import { Sprout, Package, ShoppingCart, DollarSign, Plus, Edit, Trash2, Shield, 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { secureStorage } from "@/lib/security";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
   
   const isFarmer = user?.role?.toUpperCase() === 'FARMER';
   const isBuyer = user?.role?.toUpperCase() === 'BUYER';
@@ -27,10 +39,9 @@ export default function Dashboard() {
         return [];
       }
       
+      const accessToken = secureStorage.get<string>('access_token');
       const response = await fetch('/api/marketplace/products', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : undefined,
       });
       if (!response.ok) {
         console.log('Products fetch failed');
@@ -47,9 +58,7 @@ export default function Dashboard() {
       
       // For farmers, get their farmer record and filter products
       const farmersResponse = await fetch('/api/farmers/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : undefined,
       });
       
       if (!farmersResponse.ok) {
@@ -75,18 +84,78 @@ export default function Dashboard() {
     enabled: (isFarmer || isAdmin) && !!user?.email,
   });
 
-  const handleDeleteProduct = async (productId: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-    
+  const handleToggleStatus = async (productId: number, currentStatus: string) => {
     try {
-      const response = await fetch(`/api/marketplace/products/${productId}`, {
-        method: 'DELETE',
+      const token = secureStorage.get<string>('access_token');
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please sign in to update products",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      
+      const response = await fetch(`/api/marketplace/products/${productId}/status?status=${newStatus}`, {
+        method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
       
-      if (!response.ok) throw new Error('Failed to delete product');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to update product status');
+      }
+      
+      toast({
+        title: "Success",
+        description: `Product ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
+      });
+      
+      refetchProducts();
+    } catch (error) {
+      console.error('Status update error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update product status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    try {
+      const token = secureStorage.get<string>('access_token');
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please sign in to delete products",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/auth/csrf-token', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
+      const { csrf_token } = await csrfResponse.json();
+      
+      const response = await fetch(`/api/marketplace/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrf_token,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to delete product');
+      }
       
       toast({
         title: "Success",
@@ -95,11 +164,14 @@ export default function Dashboard() {
       
       refetchProducts();
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete product",
+        description: error instanceof Error ? error.message : "Failed to delete product",
         variant: "destructive",
       });
+    } finally {
+      setDeleteProductId(null);
     }
   };
 
@@ -295,21 +367,38 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {products.map((product: any) => (
+                  {products.map((product: any) => {
+                    const images = (() => {
+                      try {
+                        if (!product.images || product.images === '[]') return [];
+                        const parsed = JSON.parse(product.images);
+                        return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                      } catch {
+                        return product.images ? [product.images.replace(/"/g, '')] : [];
+                      }
+                    })();
+                    
+                    return (
                     <div
                       key={product.id}
                       className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent"
                     >
-                      {product.images && product.images.trim() && (
-                        <img 
-                          src={product.images.replace(/"/g, '')} 
-                          alt={product.name}
-                          className="w-20 h-20 object-cover rounded"
-                          onError={(e) => {
-                            console.error('Image failed to load:', product.images);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
+                      {images.length > 0 && (
+                        <div className="relative">
+                          <img 
+                            src={images[0]} 
+                            alt={product.name}
+                            className="w-20 h-20 object-cover rounded"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          {images.length > 1 && (
+                            <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                              +{images.length - 1}
+                            </div>
+                          )}
+                        </div>
                       )}
                       <div className="flex-1">
                         <h4 className="font-semibold">{product.name}</h4>
@@ -330,6 +419,13 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
+                          variant={product.status === 'ACTIVE' ? 'default' : 'secondary'}
+                          size="sm"
+                          onClick={() => handleToggleStatus(product.id, product.status)}
+                        >
+                          {product.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/products/${product.id}/edit`)}
@@ -339,13 +435,14 @@ export default function Dashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteProduct(product.id)}
+                          onClick={() => setDeleteProductId(product.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -398,6 +495,27 @@ export default function Dashboard() {
           </Card>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteProductId !== null} onOpenChange={() => setDeleteProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteProductId && handleDeleteProduct(deleteProductId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

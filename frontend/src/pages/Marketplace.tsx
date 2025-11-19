@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
-import { ArrowLeft, Search, Filter, MapPin, Star, Plus, ShoppingCart, X, Minus } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ArrowLeft, Search, Filter, MapPin, Star, Plus, ShoppingCart, X, Minus, ZoomIn } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listProducts, createCheckoutSession } from "@/lib/api";
 import type { Product } from "@/types";
@@ -20,6 +21,7 @@ const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -159,6 +161,17 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <img 
+            src={viewingImage || ''} 
+            alt="Product" 
+            className="w-full h-auto max-h-[80vh] object-contain"
+          />
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -191,7 +204,7 @@ const Marketplace = () => {
                     <div key={item.product.id} className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">${item.product.price.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">৳{item.product.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="icon" variant="ghost" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}>
@@ -213,15 +226,15 @@ const Marketplace = () => {
                 <div className="space-y-1 mb-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>${cartTotal.toFixed(2)}</span>
+                    <span>৳{cartTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Platform fee ({(PLATFORM_FEE_RATE * 100).toFixed(0)}%)</span>
-                    <span>${platformFee.toFixed(2)}</span>
+                    <span>৳{platformFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2">
                     <span className="font-bold text-lg">Total</span>
-                    <span className="font-bold text-lg">${grandTotal.toFixed(2)}</span>
+                    <span className="font-bold text-lg">৳{grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
                 <Button onClick={handleCheckout} disabled={cart.length === 0 || isCheckingOut}>
@@ -289,10 +302,45 @@ const Marketplace = () => {
                       if (af === bf) return 0;
                       return af ? -1 : 1;
                     })
-                    .map((product) => (
+                    .map((product) => {
+                      const images = (() => {
+                        try {
+                          if (!product.images || product.images === '[]') return [];
+                          const parsed = JSON.parse(product.images);
+                          return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                        } catch {
+                          return product.images ? [product.images.replace(/"/g, '')] : [];
+                        }
+                      })();
+                      
+                      return (
                     <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                      <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                        <img src="/placeholder.svg" alt={product.name} className="w-full h-full object-cover rounded-t-lg" />
+                      <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
+                        {images.length > 0 ? (
+                          <div className="relative w-full h-full">
+                            <img 
+                              src={images[0]} 
+                              alt={product.name} 
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => setViewingImage(images[0])}
+                              onError={(e) => {
+                                e.currentTarget.src = '/placeholder.svg';
+                              }}
+                            />
+                            {images.length > 1 && (
+                              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                +{images.length - 1} more
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <ZoomIn className="h-8 w-8 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full bg-muted">
+                            <span className="text-muted-foreground">No image</span>
+                          </div>
+                        )}
                       </div>
                       <CardHeader>
                         <div className="flex justify-between items-start">
@@ -308,7 +356,7 @@ const Marketplace = () => {
                           <p className="text-muted-foreground text-sm h-10 overflow-hidden">{product.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-2xl font-bold">
-                              ${typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
+                              ৳{typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
                             </span>
                             <div className="flex items-center gap-1 text-muted-foreground text-sm">
                               <Star className="h-4 w-4" />
@@ -338,7 +386,8 @@ const Marketplace = () => {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </div>
@@ -395,7 +444,7 @@ const Marketplace = () => {
           <Card>
             <CardContent className="p-6 text-center">
               <div className="text-2xl font-bold text-primary">
-                ${products ? (products.reduce((sum, p) => sum + (p.price * (p.quantity_available || 0)), 0) / 1000).toFixed(1) : 0}K
+                ৳{products ? (products.reduce((sum, p) => sum + (p.price * (p.quantity_available || 0)), 0) / 1000).toFixed(1) : 0}K
               </div>
               <div className="text-sm text-muted-foreground">Total Inventory Value</div>
             </CardContent>

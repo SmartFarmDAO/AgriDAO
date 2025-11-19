@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,9 @@ import { ArrowLeft, Loader2, Upload, X, Crop } from "lucide-react";
 const AddProduct = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { id } = useParams();
+  const isEditMode = !!id;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [formData, setFormData] = useState({
@@ -25,6 +29,49 @@ const AddProduct = () => {
     unit: 'kg',
     min_order_quantity: '1',
   });
+
+  // Load product data in edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      const loadProduct = async () => {
+        try {
+          const token = secureStorage.get<string>("access_token");
+          const response = await fetch(`/api/marketplace/products/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const product = await response.json();
+            setFormData({
+              name: product.name || '',
+              description: product.description || '',
+              category: product.category || 'Vegetables',
+              price: product.price?.toString() || '',
+              quantity_available: product.quantity_available?.toString() || '',
+              unit: product.unit || 'kg',
+              min_order_quantity: product.min_order_quantity?.toString() || '1',
+            });
+            if (product.images) {
+              try {
+                const parsed = JSON.parse(product.images);
+                const imageArray = Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                setImages(imageArray.map((url: string) => ({ file: null as any, preview: url })));
+              } catch {
+                const imageUrl = product.images.replace(/"/g, '');
+                setImages([{ file: null as any, preview: imageUrl }]);
+              }
+            }
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load product",
+            variant: "destructive",
+          });
+        }
+      };
+      loadProduct();
+    }
+  }, [id, isEditMode, toast]);
   
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -65,10 +112,10 @@ const AddProduct = () => {
   };
 
   const addImages = (files: File[]) => {
-    if (images.length >= 6) {
+    if (images.length >= 5) {
       toast({
         title: "Maximum images reached",
-        description: "You can upload up to 6 images",
+        description: "You can upload up to 5 images",
         variant: "destructive",
       });
       return;
@@ -100,26 +147,35 @@ const AddProduct = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Set canvas to 800x600 (4:3 ratio)
-      canvas.width = 800;
-      canvas.height = 600;
+      // Fixed standard size: 800x600 pixels
+      const STANDARD_WIDTH = 800;
+      const STANDARD_HEIGHT = 600;
       
-      // Draw cropped area
+      canvas.width = STANDARD_WIDTH;
+      canvas.height = STANDARD_HEIGHT;
+      
+      // Draw cropped and scaled image to standard size
       ctx?.drawImage(
         img,
         cropArea.x, cropArea.y, cropArea.width, cropArea.height,
-        0, 0, 800, 600
+        0, 0, STANDARD_WIDTH, STANDARD_HEIGHT
       );
       
+      // Convert to blob with quality optimization
       canvas.toBlob((blob) => {
         if (blob) {
           const croppedFile = new File([blob], `product-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          const preview = canvas.toDataURL('image/jpeg', 0.9);
+          const preview = canvas.toDataURL('image/jpeg', 0.85);
           setImages(prev => [...prev, { file: croppedFile, preview }]);
           setShowCropper(false);
           setRawImage('');
+          
+          toast({
+            title: "Image added",
+            description: `Image resized to ${STANDARD_WIDTH}x${STANDARD_HEIGHT}px`,
+          });
         }
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.85);
     };
     img.src = rawImage;
   };
@@ -213,44 +269,66 @@ const AddProduct = () => {
         quantity: `${formData.quantity_available} ${formData.unit}`,
       };
 
-      // Upload first image if provided
-      if (images.length > 0) {
-        const imageFormData = new FormData();
-        imageFormData.append('file', images[0].file);
-        
-        const uploadResponse = await fetch('/api/marketplace/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: imageFormData,
-        });
+      // Upload all images
+      const uploadedUrls: string[] = [];
+      for (const image of images) {
+        if (image.file) {
+          const imageFormData = new FormData();
+          imageFormData.append('file', image.file);
+          
+          const uploadResponse = await fetch('/api/marketplace/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: imageFormData,
+          });
 
-        if (uploadResponse.ok) {
-          const { file_url } = await uploadResponse.json();
-          productData.images = file_url; // Use images column
+          if (uploadResponse.ok) {
+            const { file_url } = await uploadResponse.json();
+            uploadedUrls.push(file_url);
+          }
+        } else {
+          // Keep existing image URL
+          uploadedUrls.push(image.preview);
         }
       }
 
-      // Create product
-      const response = await fetch('/api/marketplace/products', {
-        method: 'POST',
+      // Store images as JSON array
+      if (uploadedUrls.length > 0) {
+        productData.images = JSON.stringify(uploadedUrls);
+      }
+
+      // Create or update product
+      const url = isEditMode ? `/api/marketplace/products/${id}` : '/api/marketplace/products';
+      const method = isEditMode ? 'PUT' : 'POST';
+      
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/auth/csrf-token');
+      const { csrf_token } = await csrfResponse.json();
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrf_token,
         },
         body: JSON.stringify(productData),
       });
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(error || 'Failed to create product');
+        throw new Error(error || `Failed to ${isEditMode ? 'update' : 'create'} product`);
       }
 
       toast({
         title: "Success!",
-        description: "Product listed successfully",
+        description: isEditMode ? "Product updated successfully" : "Product listed successfully",
       });
+
+      // Invalidate products query to refresh dashboard
+      queryClient.invalidateQueries({ queryKey: ['farmer-products'] });
 
       navigate('/dashboard');
     } catch (error) {
@@ -360,7 +438,7 @@ const AddProduct = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
-          <h1 className="text-2xl font-bold">Add a Product</h1>
+          <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Product' : 'Add a Product'}</h1>
           <p className="text-sm text-muted-foreground">Required fields are marked with *</p>
         </div>
       </div>
@@ -580,10 +658,10 @@ const AddProduct = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Publishing...
+                  {isEditMode ? 'Updating...' : 'Publishing...'}
                 </>
               ) : (
-                'Publish Product'
+                isEditMode ? 'Update Product' : 'Publish Product'
               )}
             </Button>
           </div>

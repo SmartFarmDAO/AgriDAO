@@ -61,7 +61,8 @@ export default function Auth() {
         setIsLoading(true);
         try {
           const response = await verifyMagicLink(magicToken);
-          try { secureStorage.set('access_token', response.access_token); } catch {}
+          secureStorage.set('access_token', response.access_token);
+          localStorage.setItem('access_token', response.access_token);
           login({ id: response.user.id, email: response.user.email, role: response.user.role || 'user' });
           toast({ title: 'Login successful', description: 'Magic link verified.' });
           navigate('/dashboard', { replace: true });
@@ -114,7 +115,8 @@ export default function Auth() {
     try {
       const response = await verifyOtp(email, code) as VerifyOtpResponse;
       // Persist access token for subsequent API calls
-      try { secureStorage.set('access_token', response.access_token); } catch {}
+      secureStorage.set('access_token', response.access_token);
+      localStorage.setItem('access_token', response.access_token);
       login({
         id: response.user.id,
         email: response.user.email,
@@ -178,7 +180,8 @@ export default function Auth() {
         const tokenParam = new URLSearchParams(res.dev_link.split('?')[1]).get('token');
         if (tokenParam) {
           const response = await verifyMagicLink(tokenParam);
-          try { secureStorage.set('access_token', response.access_token); } catch {}
+          secureStorage.set('access_token', response.access_token);
+          localStorage.setItem('access_token', response.access_token);
           login({ id: response.user.id, email: response.user.email, role: response.user.role || 'user' });
           toast({ title: 'Login successful', description: 'Magic link verified (dev).' });
           navigate('/dashboard', { replace: true });

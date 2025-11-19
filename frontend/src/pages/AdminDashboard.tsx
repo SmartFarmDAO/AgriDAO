@@ -143,6 +143,34 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleProductStatus = async (productId: number, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      
+      const response = await fetch(`/api/marketplace/products/${productId}/status?status=${newStatus}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to update product status');
+
+      toast({
+        title: "Success",
+        description: `Product ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      refetchProducts();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update product status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteProduct = async (productId: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
@@ -508,6 +536,13 @@ export default function AdminDashboard() {
                             </TableCell>
                             <TableCell>
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant={product.status === 'ACTIVE' ? 'default' : 'secondary'}
+                                  size="sm"
+                                  onClick={() => handleToggleProductStatus(product.id, product.status)}
+                                >
+                                  {product.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"

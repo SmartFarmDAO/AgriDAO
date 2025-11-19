@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { listUsers, createUser, updateUser, deleteUser, suspendUser } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { secureStorage } from "@/lib/security";
 import { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,18 +40,62 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Edit, Trash2, Ban } from "lucide-react";
+import { Plus, Edit, Trash2, Ban, Shield, AlertTriangle } from "lucide-react";
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const { data: users, isLoading, isError } = useQuery<User[]>({
+  // Check authentication
+  useEffect(() => {
+    const token = secureStorage.get<string>("access_token");
+    if (!token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access this page",
+        variant: "destructive",
+      });
+      navigate("/auth");
+    }
+  }, [navigate, toast]);
+
+  // Check if user is admin
+  if (!currentUser || currentUser.role?.toUpperCase() !== 'ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-96">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-100 rounded-full">
+                <Shield className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <CardTitle>Access Denied</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              You need admin privileges to access user management.
+            </p>
+            <Button onClick={() => navigate('/dashboard')} className="w-full">
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const { data: users, isLoading, isError, error } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: listUsers,
+    retry: 1,
   });
 
   const createMutation = useMutation({
@@ -153,9 +200,33 @@ const UserManagement = () => {
           <CardTitle>All Users</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading && <p>Loading users...</p>}
-          {isError && <p>Error fetching users.</p>}
-          {users && (
+          {isLoading && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading users...</p>
+            </div>
+          )}
+          {isError && (
+            <div className="text-center py-8">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Error Loading Users</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {error instanceof Error ? error.message : "Failed to fetch users. Please try again."}
+              </p>
+              <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
+                Retry
+              </Button>
+            </div>
+          )}
+          {users && users.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No users found
+            </div>
+          )}
+          {users && users.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>

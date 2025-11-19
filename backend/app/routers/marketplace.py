@@ -53,7 +53,6 @@ def create_product(
     product: Product,
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    # Farmers and admins can create products; buyers cannot
     if current_user.role.upper() not in ["FARMER", "ADMIN"]:
         raise HTTPException(status_code=403, detail="Only farmers and admins can create products")
 
@@ -61,13 +60,22 @@ def create_product(
         raise HTTPException(status_code=400, detail="User has no email on file")
 
     with Session(engine) as session:
-        farmer: Optional[Farmer] = session.exec(
-            select(Farmer).where(Farmer.email == current_user.email)
-        ).first()
-        if not farmer:
-            raise HTTPException(status_code=400, detail="Farmer profile not found; please complete onboarding")
+        # For admins, use provided farmer_id or find first farmer
+        if current_user.role.upper() == "ADMIN":
+            if not product.farmer_id:
+                first_farmer = session.exec(select(Farmer)).first()
+                if not first_farmer:
+                    raise HTTPException(status_code=400, detail="No farmers in system")
+                product.farmer_id = first_farmer.id
+        else:
+            # For farmers, find their profile
+            farmer: Optional[Farmer] = session.exec(
+                select(Farmer).where(Farmer.email == current_user.email)
+            ).first()
+            if not farmer:
+                raise HTTPException(status_code=400, detail="Farmer profile not found; please complete onboarding")
+            product.farmer_id = farmer.id
 
-        product.farmer_id = farmer.id
         session.add(product)
         session.commit()
         session.refresh(product)
@@ -81,5 +89,89 @@ def get_product(product_id: int) -> Product:
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
         return product
+
+
+@router.put("/products/{product_id}", response_model=Product)
+def update_product(
+    product_id: int,
+    product_update: Product,
+    current_user: User = Depends(get_current_user),
+) -> Product:
+    with Session(engine) as session:
+        product = session.get(Product, product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Check if user owns this product
+        if current_user.role.upper() not in ["ADMIN"]:
+            farmer = session.exec(
+                select(Farmer).where(Farmer.email == current_user.email)
+            ).first()
+            if not farmer or product.farmer_id != farmer.id:
+                raise HTTPException(status_code=403, detail="Not authorized to update this product")
+        
+        # Update fields
+        for key, value in product_update.dict(exclude_unset=True).items():
+            if key != "id" and key != "farmer_id":
+                setattr(product, key, value)
+        
+        session.add(product)
+        session.commit()
+        session.refresh(product)
+        return product
+
+
+@router.patch("/products/{product_id}/status")
+def update_product_status(
+    product_id: int,
+    status: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        product = session.get(Product, product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Check if user owns this product or is admin
+        if current_user.role.upper() not in ["ADMIN"]:
+            farmer = session.exec(
+                select(Farmer).where(Farmer.email == current_user.email)
+            ).first()
+            if not farmer or product.farmer_id != farmer.id:
+                raise HTTPException(status_code=403, detail="Not authorized to update this product")
+        
+        # Validate and set status
+        valid_statuses = ["ACTIVE", "INACTIVE", "active", "inactive"]
+        if status not in valid_statuses:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        product.status = status.upper()
+        session.add(product)
+        session.commit()
+        session.refresh(product)
+        return {"message": "Product status updated successfully", "product": product}
+
+
+@router.delete("/products/{product_id}")
+def delete_product(
+    product_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        product = session.get(Product, product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Check if user owns this product
+        if current_user.role.upper() not in ["ADMIN"]:
+            farmer = session.exec(
+                select(Farmer).where(Farmer.email == current_user.email)
+            ).first()
+            if not farmer or product.farmer_id != farmer.id:
+                raise HTTPException(status_code=403, detail="Not authorized to delete this product")
+        
+        session.delete(product)
+        session.commit()
+        return {"message": "Product deleted successfully"}
 
 
