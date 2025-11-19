@@ -18,20 +18,61 @@ export default function Dashboard() {
 
   // Fetch farmer's products
   const { data: products, refetch: refetchProducts } = useQuery({
-    queryKey: ['farmer-products'],
+    queryKey: ['farmer-products', user?.email],
     queryFn: async () => {
-      if (!isFarmer && !isAdmin) return [];
+      console.log('Fetching products for:', user?.email, 'Role:', user?.role);
+      
+      if (!isFarmer && !isAdmin) {
+        console.log('Not farmer or admin, returning empty');
+        return [];
+      }
+      
       const response = await fetch('/api/marketplace/products', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch products');
+      if (!response.ok) {
+        console.log('Products fetch failed');
+        return [];
+      }
       const allProducts = await response.json();
-      // Filter to show only current user's products
-      return allProducts.filter((p: any) => p.farmer_id === user?.id);
+      console.log('All products:', allProducts);
+      
+      // For admins, show all products
+      if (isAdmin) {
+        console.log('Admin user, showing all products');
+        return allProducts;
+      }
+      
+      // For farmers, get their farmer record and filter products
+      const farmersResponse = await fetch('/api/farmers/', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
+      
+      if (!farmersResponse.ok) {
+        console.log('Farmers fetch failed');
+        return [];
+      }
+      const allFarmers = await farmersResponse.json();
+      console.log('All farmers:', allFarmers);
+      
+      const myFarmer = allFarmers.find((f: any) => f.email === user?.email);
+      console.log('My farmer record:', myFarmer);
+      
+      if (!myFarmer) {
+        console.log('No farmer record found for:', user?.email);
+        return [];
+      }
+      
+      const myProducts = allProducts.filter((p: any) => p.farmer_id === myFarmer.id);
+      console.log('My products:', myProducts);
+      
+      return myProducts;
     },
-    enabled: isFarmer || isAdmin,
+    enabled: (isFarmer || isAdmin) && !!user?.email,
   });
 
   const handleDeleteProduct = async (productId: number) => {
@@ -257,8 +298,19 @@ export default function Dashboard() {
                   {products.map((product: any) => (
                     <div
                       key={product.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent"
+                      className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent"
                     >
+                      {product.images && product.images.trim() && (
+                        <img 
+                          src={product.images.replace(/"/g, '')} 
+                          alt={product.name}
+                          className="w-20 h-20 object-cover rounded"
+                          onError={(e) => {
+                            console.error('Image failed to load:', product.images);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
                       <div className="flex-1">
                         <h4 className="font-semibold">{product.name}</h4>
                         <p className="text-sm text-muted-foreground">{product.category}</p>

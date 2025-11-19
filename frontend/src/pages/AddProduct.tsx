@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createProduct } from "@/lib/api";
-import { ArrowLeft, Loader2, Package } from "lucide-react";
+import { secureStorage } from "@/lib/security";
+import { ArrowLeft, Loader2, Upload, X, Crop } from "lucide-react";
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -24,24 +26,230 @@ const AddProduct = () => {
     min_order_quantity: '1',
   });
   
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Cropping state
+  const [showCropper, setShowCropper] = useState(false);
+  const [rawImage, setRawImage] = useState<string>('');
+  const [cropArea, setCropArea] = useState({ x: 50, y: 50, width: 400, height: 300 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+    addImages(files);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      addImages(files);
+    }
+  };
+
+  const addImages = (files: File[]) => {
+    if (images.length >= 6) {
+      toast({
+        title: "Maximum images reached",
+        description: "You can upload up to 6 images",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const file = files[0]; // Process one at a time
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: `${file.name} exceeds 5MB`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setRawImage(reader.result as string);
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const cropImage = () => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Set canvas to 800x600 (4:3 ratio)
+      canvas.width = 800;
+      canvas.height = 600;
+      
+      // Draw cropped area
+      ctx?.drawImage(
+        img,
+        cropArea.x, cropArea.y, cropArea.width, cropArea.height,
+        0, 0, 800, 600
+      );
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const croppedFile = new File([blob], `product-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const preview = canvas.toDataURL('image/jpeg', 0.9);
+          setImages(prev => [...prev, { file: croppedFile, preview }]);
+          setShowCropper(false);
+          setRawImage('');
+        }
+      }, 'image/jpeg', 0.9);
+    };
+    img.src = rawImage;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging && !isResizing) return;
+    
+    const container = e.currentTarget.querySelector('img');
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    
+    if (isDragging) {
+      const newX = e.clientX - rect.left - dragStart.x;
+      const newY = e.clientY - rect.top - dragStart.y;
+      
+      setCropArea(prev => ({
+        ...prev,
+        x: Math.max(0, Math.min(newX, rect.width - prev.width)),
+        y: Math.max(0, Math.min(newY, rect.height - prev.height)),
+      }));
+    } else if (isResizing) {
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Calculate new width maintaining 4:3 ratio
+      let newWidth = Math.max(100, mouseX - cropArea.x);
+      let newHeight = newWidth * 0.75; // 4:3 ratio
+      
+      // Constrain to image bounds
+      if (cropArea.x + newWidth > rect.width) {
+        newWidth = rect.width - cropArea.x;
+        newHeight = newWidth * 0.75;
+      }
+      if (cropArea.y + newHeight > rect.height) {
+        newHeight = rect.height - cropArea.y;
+        newWidth = newHeight * 1.333; // 4:3 ratio
+      }
+      
+      setCropArea(prev => ({
+        ...prev,
+        width: newWidth,
+        height: newHeight,
+      }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveImage = (from: number, to: number) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      const [moved] = newImages.splice(from, 1);
+      newImages.splice(to, 0, moved);
+      return newImages;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.price || !formData.quantity_available) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await createProduct({
+      const token = secureStorage.get<string>("access_token");
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      const productData: any = {
         ...formData,
         price: parseFloat(formData.price),
         quantity_available: parseInt(formData.quantity_available),
         min_order_quantity: parseInt(formData.min_order_quantity),
         quantity: `${formData.quantity_available} ${formData.unit}`,
+      };
+
+      // Upload first image if provided
+      if (images.length > 0) {
+        const imageFormData = new FormData();
+        imageFormData.append('file', images[0].file);
+        
+        const uploadResponse = await fetch('/api/marketplace/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: imageFormData,
+        });
+
+        if (uploadResponse.ok) {
+          const { file_url } = await uploadResponse.json();
+          productData.images = file_url; // Use images column
+        }
+      }
+
+      // Create product
+      const response = await fetch('/api/marketplace/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(productData),
       });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Failed to create product');
+      }
 
       toast({
         title: "Success!",
-        description: "Product added to marketplace successfully",
+        description: "Product listed successfully",
       });
 
       navigate('/dashboard');
@@ -57,60 +265,214 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container max-w-3xl mx-auto px-4">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+    <>
+      {/* Image Cropper Dialog */}
+      <Dialog open={showCropper} onOpenChange={setShowCropper}>
+        <DialogContent className="max-w-3xl" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
+          <DialogHeader>
+            <DialogTitle>Crop Image to 800x600 (4:3 Ratio)</DialogTitle>
+            <DialogDescription>
+              Drag the crop area to select the portion you want to use
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative bg-muted rounded-lg overflow-hidden select-none" style={{ maxHeight: '500px' }}>
+            <img 
+              src={rawImage} 
+              alt="Original" 
+              className="w-full h-auto pointer-events-none"
+              style={{ maxHeight: '500px', objectFit: 'contain' }}
+              draggable={false}
+            />
+            <div
+              className="absolute border-4 border-primary bg-primary/10 cursor-move"
+              style={{
+                left: `${cropArea.x}px`,
+                top: `${cropArea.y}px`,
+                width: `${cropArea.width}px`,
+                height: `${cropArea.height}px`,
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDragStart({ 
+                  x: e.clientX - rect.left, 
+                  y: e.clientY - rect.top 
+                });
+              }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center text-white font-semibold text-sm bg-black/20 pointer-events-none">
+                <Crop className="h-6 w-6 mr-2" />
+                Drag to move • Resize from corners
+              </div>
+              
+              {/* Resize handles */}
+              <div 
+                className="absolute -bottom-2 -right-2 w-6 h-6 bg-primary rounded-full cursor-se-resize border-2 border-white shadow-lg"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsResizing(true);
+                }}
+              />
+              <div 
+                className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full cursor-ne-resize border-2 border-white shadow-lg"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsResizing(true);
+                }}
+              />
+              <div 
+                className="absolute -bottom-2 -left-2 w-6 h-6 bg-primary rounded-full cursor-sw-resize border-2 border-white shadow-lg"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsResizing(true);
+                }}
+              />
+              <div 
+                className="absolute -top-2 -left-2 w-6 h-6 bg-primary rounded-full cursor-nw-resize border-2 border-white shadow-lg"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsResizing(true);
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCropper(false)}>
+              Cancel
+            </Button>
+            <Button onClick={cropImage}>
+              <Crop className="h-4 w-4 mr-2" />
+              Crop & Add Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="min-h-screen bg-background">
+      <div className="border-b">
+        <div className="container max-w-6xl mx-auto px-4 py-4">
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mb-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
+          <h1 className="text-2xl font-bold">Add a Product</h1>
+          <p className="text-sm text-muted-foreground">Required fields are marked with *</p>
         </div>
+      </div>
 
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-            <Package className="h-8 w-8 text-green-600" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">Add New Product</h1>
-          <p className="text-muted-foreground">
-            List your product on the marketplace
-          </p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Details</CardTitle>
-            <CardDescription>
-              Fill in the information about your product
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Basic Information</h3>
+      <div className="container max-w-6xl mx-auto px-4 py-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Product Images */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Images</CardTitle>
+              <CardDescription>
+                Add up to 6 images. First image will be the main product image.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {images.map((img, index) => (
+                  <div key={index} className="relative group aspect-square border-2 rounded-lg overflow-hidden">
+                    <img src={img.preview} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                    {index === 0 && (
+                      <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                        Main
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      {index > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => moveImage(index, 0)}
+                        >
+                          Set as Main
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
                 
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Organic Tomatoes"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
+                {images.length < 6 && (
+                  <div
+                    className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground text-center px-4">
+                      Drag and drop or click to upload
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      JPG, PNG up to 5MB
+                    </p>
+                  </div>
+                )}
+              </div>
+              <Input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your product..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={4}
-                  />
-                </div>
+          {/* Product Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Product Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Fresh Organic Tomatoes"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="description">Product Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your product in detail..."
+                  rows={5}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include key features, growing methods, and any certifications
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select
@@ -132,106 +494,103 @@ const AddProduct = () => {
                   </Select>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Pricing & Inventory */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Pricing & Inventory</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price per Unit *</Label>
+          {/* Pricing & Inventory */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pricing & Inventory</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price per Unit *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                     <Input
                       id="price"
                       type="number"
                       step="0.01"
-                      min="0"
                       placeholder="0.00"
+                      className="pl-7"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       required
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="unit">Unit *</Label>
-                    <Select
-                      value={formData.unit}
-                      onValueChange={(value) => setFormData({ ...formData, unit: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="kg">Kilogram (kg)</SelectItem>
-                        <SelectItem value="lb">Pound (lb)</SelectItem>
-                        <SelectItem value="piece">Piece</SelectItem>
-                        <SelectItem value="dozen">Dozen</SelectItem>
-                        <SelectItem value="bunch">Bunch</SelectItem>
-                        <SelectItem value="bag">Bag</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity_available">Quantity Available *</Label>
-                    <Input
-                      id="quantity_available"
-                      type="number"
-                      min="0"
-                      placeholder="100"
-                      value={formData.quantity_available}
-                      onChange={(e) => setFormData({ ...formData, quantity_available: e.target.value })}
-                      required
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Available Quantity *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    placeholder="100"
+                    value={formData.quantity_available}
+                    onChange={(e) => setFormData({ ...formData, quantity_available: e.target.value })}
+                    required
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="min_order_quantity">Minimum Order</Label>
-                    <Input
-                      id="min_order_quantity"
-                      type="number"
-                      min="1"
-                      placeholder="1"
-                      value={formData.min_order_quantity}
-                      onChange={(e) => setFormData({ ...formData, min_order_quantity: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unit *</Label>
+                  <Select
+                    value={formData.unit}
+                    onValueChange={(value) => setFormData({ ...formData, unit: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                      <SelectItem value="lb">Pounds (lb)</SelectItem>
+                      <SelectItem value="g">Grams (g)</SelectItem>
+                      <SelectItem value="oz">Ounces (oz)</SelectItem>
+                      <SelectItem value="piece">Pieces</SelectItem>
+                      <SelectItem value="bunch">Bunches</SelectItem>
+                      <SelectItem value="dozen">Dozen</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Submit */}
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/dashboard')}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Adding Product...
-                    </>
-                  ) : (
-                    'Add Product'
-                  )}
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="min_order">Minimum Order Quantity</Label>
+                <Input
+                  id="min_order"
+                  type="number"
+                  placeholder="1"
+                  value={formData.min_order_quantity}
+                  onChange={(e) => setFormData({ ...formData, min_order_quantity: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum quantity buyers must purchase
+                </p>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Submit */}
+          <div className="flex items-center justify-between pt-6 border-t">
+            <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting} size="lg">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                'Publish Product'
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
+    </>
   );
 };
 

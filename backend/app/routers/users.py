@@ -2,10 +2,10 @@ from typing import List
 from pydantic import BaseModel
 
 from fastapi import APIRouter, HTTPException, Depends
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from ..database import engine
-from ..models import User, UserStatus
+from ..models import User, UserStatus, Order
 from ..deps import get_current_user
 
 
@@ -131,11 +131,25 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user)):
         if user.id == current_user.id:
             raise HTTPException(status_code=400, detail="Cannot delete yourself")
         
-        # Delete related sessions first to avoid foreign key constraint
+        # Delete related records to avoid foreign key constraints
         from ..models import UserSession
+        from sqlmodel import select
+        
+        # Delete user sessions
         sessions = session.exec(select(UserSession).where(UserSession.user_id == user_id)).all()
         for s in sessions:
             session.delete(s)
+        
+        # Check if user has orders - prevent deletion if they do
+        order_count = session.exec(
+            select(func.count()).select_from(Order).where(Order.buyer_id == user_id)
+        ).one()
+        
+        if order_count > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot delete user with {order_count} existing orders. Please archive the user instead."
+            )
         
         session.delete(user)
         session.commit()

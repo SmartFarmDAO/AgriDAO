@@ -1,6 +1,9 @@
 from typing import List, Optional
+import os
+import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session, select
 
 from ..database import engine
@@ -9,6 +12,34 @@ from ..deps import get_current_user
 
 
 router = APIRouter()
+
+# Upload directory
+UPLOAD_DIR = Path("uploads/images")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@router.post("/upload")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload product image"""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = UPLOAD_DIR / filename
+    
+    # Save file
+    contents = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    # Return URL
+    file_url = f"/uploads/images/{filename}"
+    return {"file_url": file_url}
 
 
 @router.get("/products", response_model=List[Product])
@@ -22,9 +53,9 @@ def create_product(
     product: Product,
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    # Only farmers can create products; must have a farmer profile
-    if current_user.role != "farmer":
-        raise HTTPException(status_code=403, detail="Only farmers can create products")
+    # Farmers and admins can create products; buyers cannot
+    if current_user.role.upper() not in ["FARMER", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="Only farmers and admins can create products")
 
     if not current_user.email:
         raise HTTPException(status_code=400, detail="User has no email on file")

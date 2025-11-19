@@ -21,12 +21,11 @@ class OTPService:
         self.max_attempts = 3
         
         # Email configuration
-        self.smtp_host = os.getenv("SMTP_HOST", "mailhog")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "1025"))
-        self.smtp_username = os.getenv("SMTP_USERNAME", "")
+        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "465"))
+        self.smtp_username = os.getenv("SMTP_USERNAME", "smartfarmdao@gmail.com")
         self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.smtp_use_tls = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
-        self.from_email = os.getenv("FROM_EMAIL", "noreply@agridao.local")
+        self.from_email = os.getenv("FROM_EMAIL", "smartfarmdao@gmail.com")
         self.from_name = os.getenv("FROM_NAME", "AgriDAO")
         
         # SMS configuration
@@ -121,7 +120,7 @@ class OTPService:
             }
     
     def _send_email(self, email: str, code: str) -> bool:
-        """Send OTP email using SMTP"""
+        """Send OTP email using Gmail SMTP"""
         try:
             import smtplib
             from email.mime.text import MIMEText
@@ -195,11 +194,9 @@ class OTPService:
             msg.attach(MIMEText(text_body, "plain"))
             msg.attach(MIMEText(html_body, "html"))
             
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                if self.smtp_use_tls:
-                    server.starttls()
-                if self.smtp_username and self.smtp_password:
-                    server.login(self.smtp_username, self.smtp_password)
+            # Use Gmail SMTP with SSL
+            with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
+                server.login(self.smtp_username, self.smtp_password)
                 server.send_message(msg)
             
             logger.info(f"OTP email sent successfully to {email}")

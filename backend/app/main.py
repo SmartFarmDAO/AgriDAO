@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 
 from .database import init_db
@@ -107,6 +108,9 @@ app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(cart.router, prefix="/api", tags=["cart"])
 app.include_router(notifications.router, prefix="/api", tags=["notifications"])
+
+# Mount uploads directory for serving images
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(orders.router, prefix="/api", tags=["orders"])
 app.include_router(disputes.router, prefix="/api", tags=["disputes"])
 app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

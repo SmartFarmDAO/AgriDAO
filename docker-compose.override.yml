@@ -15,8 +15,3 @@ services:
   frontend:
     environment:
       - VITE_API_URL=http://localhost:8000
-
-  mailhog:
-    # MailHog for email testing - Access UI at http://localhost:8025
-    # All emails sent by the app will be captured here
-    restart: unless-stopped

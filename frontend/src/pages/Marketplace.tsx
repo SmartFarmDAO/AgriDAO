@@ -378,26 +378,34 @@ const Marketplace = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-12">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-primary">1,247</div>
+              <div className="text-2xl font-bold text-primary">
+                {products ? new Set(products.map(p => p.farmer_id)).size : 0}
+              </div>
               <div className="text-sm text-muted-foreground">Active Farmers</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-primary">3,892</div>
+              <div className="text-2xl font-bold text-primary">
+                {products?.length || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Products Listed</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-primary">$2.1M</div>
-              <div className="text-sm text-muted-foreground">Total Sales</div>
+              <div className="text-2xl font-bold text-primary">
+                ${products ? (products.reduce((sum, p) => sum + (p.price * (p.quantity_available || 0)), 0) / 1000).toFixed(1) : 0}K
+              </div>
+              <div className="text-sm text-muted-foreground">Total Inventory Value</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-primary">98.2%</div>
-              <div className="text-sm text-muted-foreground">Satisfaction Rate</div>
+              <div className="text-2xl font-bold text-primary">
+                {products && products.length > 0 ? (products.filter(p => p.quantity_available > 0).length / products.length * 100).toFixed(1) : 0}%
+              </div>
+              <div className="text-sm text-muted-foreground">In Stock Rate</div>
             </CardContent>
           </Card>
         </div>
