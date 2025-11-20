@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Search, Filter, MapPin, Star, Plus, ShoppingCart, X, Minus, ZoomIn } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listProducts, createCheckoutSession } from "@/lib/api";
 import type { Product } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
+import { secureStorage } from "@/lib/security";
 
 type CartItem = { product: Product; quantity: number };
 
@@ -22,8 +23,14 @@ const Marketplace = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const isAuthenticated = () => {
+    return !!(secureStorage.get<string>("access_token") || localStorage.getItem("access_token"));
+  };
 
   const { data: products, isLoading, isError } = useQuery<Product[]>({
     queryKey: ["products"],
@@ -66,6 +73,19 @@ const Marketplace = () => {
     }
   }, [cart]);
 
+  // Prompt to sign in when leaving page with cart items
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (cart.length > 0 && !isAuthenticated()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [cart.length]);
+
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.product.id === product.id);
@@ -80,6 +100,11 @@ const Marketplace = () => {
   };
 
   const handleBuyNow = async (product: Product) => {
+    if (!isAuthenticated()) {
+      setShowSignInDialog(true);
+      return;
+    }
+
     setIsCheckingOut(true);
     try {
       const payload = {
@@ -95,13 +120,7 @@ const Marketplace = () => {
       }
     } catch (error: any) {
       const msg = String(error?.message ?? "Failed to create checkout session.");
-      if (msg.includes("401")) {
-        toast({ title: "Sign in required", description: "Please sign in to continue.", variant: "destructive" });
-        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/auth?redirect=${redirect}`;
-      } else {
-        toast({ title: "Checkout Error", description: msg, variant: "destructive" });
-      }
+      toast({ title: "Checkout Error", description: msg, variant: "destructive" });
     } finally {
       setIsCheckingOut(false);
     }
@@ -120,7 +139,10 @@ const Marketplace = () => {
   };
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    return cart.reduce((total, item) => {
+      const price = typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price);
+      return total + (price * item.quantity);
+    }, 0);
   }, [cart]);
 
   const platformFee = useMemo(() => {
@@ -130,6 +152,11 @@ const Marketplace = () => {
   const grandTotal = useMemo(() => cartTotal + platformFee, [cartTotal, platformFee]);
 
   const handleCheckout = async () => {
+    if (!isAuthenticated()) {
+      setShowSignInDialog(true);
+      return;
+    }
+
     setIsCheckingOut(true);
     try {
       const payload = {
@@ -146,14 +173,7 @@ const Marketplace = () => {
     } catch (error: any) {
       console.error("Checkout failed:", error);
       const msg = String(error?.message ?? "Failed to create checkout session.");
-      if (msg.includes("401")) {
-        toast({ title: "Sign in required", description: "Please sign in to checkout.", variant: "destructive" });
-        // Preserve current page for return after auth if desired
-        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/auth?redirect=${redirect}`;
-      } else {
-        toast({ title: "Checkout Error", description: msg, variant: "destructive" });
-      }
+      toast({ title: "Checkout Error", description: msg, variant: "destructive" });
     } finally {
       setIsCheckingOut(false);
     }
@@ -161,6 +181,38 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Sign In Dialog */}
+      <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign in to continue</DialogTitle>
+            <DialogDescription>
+              {cart.length > 0 
+                ? "Sign in to save your cart and complete checkout. Your cart will be preserved after signing in."
+                : "Sign in to complete your purchase."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSignInDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Continue Shopping
+            </Button>
+            <Button 
+              onClick={() => {
+                const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = `/auth?redirect=${redirect}`;
+              }}
+              className="w-full sm:w-auto"
+            >
+              Sign In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Image Viewer Dialog */}
       <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
         <DialogContent className="max-w-4xl">
@@ -204,7 +256,7 @@ const Marketplace = () => {
                     <div key={item.product.id} className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">৳{item.product.price.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">৳{typeof item.product.price === 'number' ? item.product.price.toFixed(2) : parseFloat(item.product.price).toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="icon" variant="ghost" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}>
@@ -375,10 +427,10 @@ const Marketplace = () => {
                           </div>
 
                           <div className="flex gap-2 pt-2">
-                            <Button className="flex-1" onClick={() => addToCart(product)} disabled={Number(product.quantity ?? 0) <= 0}>
+                            <Button className="flex-1" onClick={() => addToCart(product)}>
                               Add to Cart
                             </Button>
-                            <Button className="flex-1" variant="secondary" onClick={() => handleBuyNow(product)} disabled={Number(product.quantity ?? 0) <= 0 || isCheckingOut}>
+                            <Button className="flex-1" variant="secondary" onClick={() => handleBuyNow(product)} disabled={isCheckingOut}>
                               {isCheckingOut ? "Processing..." : "Buy Now"}
                             </Button>
                             <Button variant="outline" onClick={() => toast({ title: "Contact seller", description: "Messaging coming soon." })}>Contact</Button>

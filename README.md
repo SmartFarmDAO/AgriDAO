@@ -561,6 +561,8 @@ npm run build               # Verify production build
 Comprehensive documentation is available in the `/docs` directory:
 
 ### 🚀 **Quick Start**
+- **[Documentation Index](./docs/INDEX.md)** - Complete documentation navigation
+- **[Project Structure](./PROJECT_STRUCTURE.md)** - Codebase organization guide
 - **[Getting Started](./docs/getting-started/README.md)** - Installation and setup
 - **[User Guide](./docs/user-guide/README.md)** - Complete user documentation
 - **[API Documentation](./docs/api/README.md)** - Developer API reference
@@ -573,7 +575,11 @@ Comprehensive documentation is available in the `/docs` directory:
 ### 📋 **Project Documentation**
 - **[Requirements](./docs/project/requirements.md)** - Functional and technical requirements
 - **[Roadmap](./docs/project/roadmap.md)** - Future development plans and milestones
-- **[Design Decisions](./docs/project/design-decisions.md)** - Architectural choices and rationale
+
+### 📖 **Additional Resources**
+- **[Guides](./docs/guides/)** - Step-by-step tutorials and how-tos
+- **[Troubleshooting](./docs/troubleshooting/)** - Common issues and solutions
+- **[Deployment Guides](./docs/deployment/)** - Setup and deployment instructions
 
 ## 📞 Production Support
 

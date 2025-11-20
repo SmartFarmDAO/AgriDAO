@@ -111,3 +111,12 @@ backend/.pytest_cache/
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation build artifacts
+docs/.build/
+docs/_build/
+
+# Script logs
+scripts/**/*.log
+scripts/**/logs/
+

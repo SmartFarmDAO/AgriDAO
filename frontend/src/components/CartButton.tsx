@@ -2,12 +2,13 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Minus, Plus, X } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 type CartItem = {
   product_id: number;
   quantity: number;
   name?: string;
-  price?: number;
+  price?: number | string;
 };
 
 type CartButtonProps = {
@@ -16,6 +17,12 @@ type CartButtonProps = {
 };
 
 export function CartButton({ cartCount, cartItems }: CartButtonProps) {
+  const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    navigate('/marketplace');
+  };
+
   return (
     <Drawer>
       <DrawerTrigger asChild>
@@ -52,7 +59,7 @@ export function CartButton({ cartCount, cartItems }: CartButtonProps) {
                   <div key={item.product_id} className="flex items-start justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{item.name || `Product ${item.product_id}`}</h4>
-                      <p className="text-sm text-gray-600">${item.price?.toFixed(2)} each</p>
+                      <p className="text-sm text-gray-600">৳{typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(item.price || '0').toFixed(2)} each</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {}}>
@@ -70,7 +77,10 @@ export function CartButton({ cartCount, cartItems }: CartButtonProps) {
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
                   <span>
-                    ${cartItems.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0).toFixed(2)}
+                    ৳{cartItems.reduce((sum, item) => {
+                      const price = typeof item.price === 'number' ? item.price : parseFloat(item.price || '0');
+                      return sum + price * item.quantity;
+                    }, 0).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -79,7 +89,10 @@ export function CartButton({ cartCount, cartItems }: CartButtonProps) {
         </div>
         {cartItems.length > 0 && (
           <DrawerFooter className="border-t">
-            <Button className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
+            <Button 
+              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+              onClick={handleCheckout}
+            >
               Proceed to Checkout
             </Button>
             <DrawerClose asChild>
