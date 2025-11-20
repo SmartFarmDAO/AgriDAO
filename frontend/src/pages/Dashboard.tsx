@@ -2,11 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Sprout, Package, ShoppingCart, DollarSign, Plus, Edit, Trash2, Shield, Users, Settings } from "lucide-react";
+import { Sprout, Package, ShoppingCart, DollarSign, Plus, Edit, Trash2, Shield, Users, Settings, Ban, Search, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { secureStorage } from "@/lib/security";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,16 +21,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { listAllUsers, updateUserRole, suspendUser, deleteUserById } from "@/lib/api";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
   
   const isFarmer = user?.role?.toUpperCase() === 'FARMER';
   const isBuyer = user?.role?.toUpperCase() === 'BUYER';
   const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+
+  // Fetch users for admin
+  const { data: users, refetch: refetchUsers, isLoading: loadingUsers, error: usersError } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: async () => {
+      if (!isAdmin) return [];
+      try {
+        console.log('Fetching users as admin...');
+        const result = await listAllUsers();
+        console.log('Users fetched successfully:', result);
+        return result;
+      } catch (err: any) {
+        console.error('Error fetching users:', err);
+        console.error('Error response:', err.response);
+        toast({
+          title: "Error Loading Users",
+          description: err.response?.data?.detail || err.message || "Failed to load users",
+          variant: "destructive",
+        });
+        throw err;
+      }
+    },
+    enabled: isAdmin,
+    retry: 1,
+  });
 
   // Fetch farmer's products
   const { data: products, refetch: refetchProducts } = useQuery({
@@ -175,6 +209,71 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpdateUserRole = async (userId: number, newRole: string) => {
+    try {
+      await updateUserRole(userId, newRole);
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+      refetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSuspendUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to suspend this user?')) return;
+
+    try {
+      await suspendUser(userId);
+      toast({
+        title: "Success",
+        description: "User suspended successfully",
+      });
+      refetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to suspend user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await deleteUserById(userToDelete.id);
+      toast({
+        title: "User Deleted",
+        description: `${userToDelete.email} has been permanently deleted`,
+      });
+      refetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete user",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const filteredUsers = users?.filter((u: any) => {
+    const matchesSearch = u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         u.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = selectedRole === 'all' || u.role?.toLowerCase() === selectedRole.toLowerCase();
+    return matchesSearch && matchesRole;
+  }) || [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -229,6 +328,160 @@ export default function Dashboard() {
                 Order Management
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin User List */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>View and manage all platform users</CardDescription>
+              </div>
+              <Badge variant="secondary">{filteredUsers.length} users</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by email or name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="buyer">Buyers</SelectItem>
+                  <SelectItem value="farmer">Farmers</SelectItem>
+                  <SelectItem value="admin">Admins</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loadingUsers ? (
+              <div className="text-center py-8 text-muted-foreground">Loading users...</div>
+            ) : usersError ? (
+              <div className="text-center py-8">
+                <div className="text-red-600 font-medium mb-2">Failed to load users</div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {usersError instanceof Error ? usersError.message : 'An error occurred'}
+                </p>
+                <Button onClick={() => refetchUsers()} variant="outline">
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-16">ID</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((userItem: any) => (
+                        <TableRow key={userItem.id} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-sm text-muted-foreground">{userItem.id}</TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{userItem.email}</div>
+                              {userItem.name && <div className="text-sm text-muted-foreground">{userItem.name}</div>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={userItem.role}
+                              onValueChange={(value) => handleUpdateUserRole(userItem.id, value)}
+                              disabled={userItem.id === user?.id}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="BUYER">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                    Buyer
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="FARMER">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                                    Farmer
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="ADMIN">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                    Admin
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={userItem.status === 'ACTIVE' ? 'default' : 'destructive'}
+                              className="font-medium"
+                            >
+                              {userItem.status || 'ACTIVE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSuspendUser(userItem.id)}
+                                disabled={userItem.id === user?.id}
+                                title="Suspend user"
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Suspend
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setUserToDelete(userItem);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                disabled={userItem.id === user?.id}
+                                title="Delete user permanently"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -496,7 +749,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Product Confirmation Dialog */}
       <AlertDialog open={deleteProductId !== null} onOpenChange={() => setDeleteProductId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -512,6 +765,42 @@ export default function Dashboard() {
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User Permanently?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                You are about to permanently delete <strong>{userToDelete?.email}</strong>.
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+                <p className="font-medium text-red-900 text-sm">This action cannot be undone. This will:</p>
+                <ul className="text-sm text-red-800 space-y-1 ml-4 list-disc">
+                  <li>Permanently delete the user account</li>
+                  <li>Remove all associated data</li>
+                  <li>Delete their products and listings</li>
+                  <li>Cancel any pending orders</li>
+                </ul>
+              </div>
+              <p className="text-sm">
+                Consider using <strong>Suspend</strong> instead if you want to temporarily disable the account.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

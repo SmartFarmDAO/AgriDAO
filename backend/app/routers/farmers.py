@@ -33,6 +33,42 @@ def get_my_farmer_profile(current_user: User = Depends(get_current_user)) -> Far
         return farmer
 
 
+@router.post("/me", response_model=Farmer, status_code=201)
+def create_my_farmer_profile(
+    farmer: Farmer,
+    current_user: User = Depends(get_current_user),
+) -> Farmer:
+    """Create or return an existing farmer profile for the authenticated user.
+    Idempotent by email linkage (no schema change required).
+    """
+    if not current_user.email:
+        raise HTTPException(status_code=400, detail="User has no email on file")
+
+    with Session(engine) as session:
+        existing = session.exec(
+            select(Farmer).where(Farmer.email == current_user.email)
+        ).first()
+        if existing:
+            return existing
+
+        # Pre-fill linkage via email; prefer provided fields from payload.
+        farmer.email = current_user.email
+        if not getattr(farmer, "name", None):
+            farmer.name = current_user.name or current_user.email.split("@")[0]
+        session.add(farmer)
+        session.commit()
+        session.refresh(farmer)
+
+        # Promote user role to 'farmer' upon successful onboarding (MVP behavior)
+        db_user = session.get(User, current_user.id)
+        if db_user and db_user.role.lower() != "farmer":
+            db_user.role = "FARMER"
+            session.add(db_user)
+            session.commit()
+
+        return farmer
+
+
 @router.post("/", response_model=Farmer, status_code=201)
 def register_farmer(
     farmer: Farmer,

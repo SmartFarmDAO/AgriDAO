@@ -26,6 +26,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { listAllUsers, updateUserRole, suspendUser, deleteUserById } from '@/lib/api';
+import { secureStorage } from '@/lib/security';
 
 export default function AdminDashboard() {
   const { user: currentUser, logout } = useAuth();
@@ -66,9 +67,22 @@ export default function AdminDashboard() {
   }
 
   // Fetch users
-  const { data: users, refetch: refetchUsers, isLoading: loadingUsers } = useQuery({
+  const { data: users, refetch: refetchUsers, isLoading: loadingUsers, error: usersError } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: listAllUsers,
+    queryFn: async () => {
+      console.log('Fetching users...');
+      console.log('Access token:', secureStorage.get('access_token'));
+      try {
+        const result = await listAllUsers();
+        console.log('Users fetched:', result);
+        return result;
+      } catch (err: any) {
+        console.error('Error fetching users:', err);
+        console.error('Error response:', err.response);
+        console.error('Error message:', err.message);
+        throw err;
+      }
+    },
   });
 
   // Fetch products
@@ -214,6 +228,11 @@ export default function AdminDashboard() {
     window.URL.revokeObjectURL(url);
     toast({ title: "Success", description: "Users exported" });
   };
+
+  // Show error if users failed to load
+  if (usersError) {
+    console.error('Users error:', usersError);
+  }
 
   const filteredUsers = users?.filter((u: any) => {
     const matchesSearch = u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||

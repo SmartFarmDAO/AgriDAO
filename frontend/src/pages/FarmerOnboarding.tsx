@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { createMyFarmerProfile } from "@/lib/api";
+import { secureStorage } from "@/lib/security";
 import { Loader2, Sprout } from "lucide-react";
 
 const FarmerOnboarding = () => {
@@ -35,18 +36,22 @@ const FarmerOnboarding = () => {
     try {
       await createMyFarmerProfile(formData);
 
-      // Update user role in localStorage
-      const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
-      currentUser.role = 'farmer';
-      localStorage.setItem('current_user', JSON.stringify(currentUser));
-
       toast({
         title: "Success!",
-        description: "You're now registered as a farmer. You can start listing products.",
+        description: "You're now registered as a farmer. Logging you out to refresh your session...",
       });
 
-      // Reload to refresh auth context
-      window.location.href = '/dashboard';
+      // Clear all auth data to force fresh login
+      secureStorage.remove('access_token');
+      secureStorage.remove('refresh_token');
+      secureStorage.remove('current_user');
+      localStorage.removeItem('current_user');
+      localStorage.removeItem('access_token');
+
+      // Redirect to auth page with success message
+      setTimeout(() => {
+        window.location.href = '/auth?message=farmer_registered';
+      }, 2000);
     } catch (error) {
       toast({
         title: "Error",

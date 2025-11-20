@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: https:;
         font-src 'self';
-        connect-src 'self' http://127.0.0.1:8080 https:;
+        connect-src 'self' http://localhost:* http://127.0.0.1:* http://backend:8000 https: ws: wss:;
         frame-src 'self';
         media-src 'self';
         object-src 'none';

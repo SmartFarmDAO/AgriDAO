@@ -1,7 +1,7 @@
 // API Configuration
 const config = {
-  // Default to local development URL
-  baseURL: 'http://localhost:8000',
+  // Use relative path for proxy in development
+  baseURL: '/api',
   // You can add other API-related configurations here
   timeout: 10000, // 10 seconds
   headers: {

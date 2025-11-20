@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { listUsers, createUser, updateUser, deleteUser, suspendUser } from "@/lib/api";
+import { listAllUsers, createUser, updateUser, deleteUserById, suspendUser, updateUserRole } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { secureStorage } from "@/lib/security";
 import { User } from "@/types";
@@ -94,7 +94,7 @@ const UserManagement = () => {
 
   const { data: users, isLoading, isError, error } = useQuery<User[]>({
     queryKey: ["users"],
-    queryFn: listUsers,
+    queryFn: listAllUsers,
     retry: 1,
   });
 
@@ -123,7 +123,7 @@ const UserManagement = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteUser,
+    mutationFn: deleteUserById,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({ title: "Success", description: "User deleted successfully." });

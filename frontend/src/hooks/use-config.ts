@@ -14,15 +14,20 @@ export function useConfig() {
       try {
         const response = await fetch('/config.json');
         if (!response.ok) {
-          throw new Error('Failed to load configuration');
+          console.warn('Config file not found, using defaults');
+          // Use default config instead of throwing error
+          setConfig({ apiUrl: 'http://localhost:8000' });
+          setIsLoading(false);
+          return;
         }
         const data = await response.json();
         setConfig({
           apiUrl: data.apiUrl || 'http://localhost:8000',
         });
       } catch (err) {
-        console.error('Error loading config:', err);
-        setError(err instanceof Error ? err : new Error('Failed to load configuration'));
+        console.warn('Error loading config, using defaults:', err);
+        // Use default config instead of setting error
+        setConfig({ apiUrl: 'http://localhost:8000' });
       } finally {
         setIsLoading(false);
       }

@@ -2,16 +2,32 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { registerServiceWorker, installPrompt, handleNetworkStatus } from './utils/pwa';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Register PWA features
-registerServiceWorker();
-installPrompt();
-handleNetworkStatus();
+// Temporarily disable PWA features for debugging
+// import { registerServiceWorker, installPrompt, handleNetworkStatus } from './utils/pwa';
+// registerServiceWorker();
+// installPrompt();
+// handleNetworkStatus();
 
-const root = createRoot(document.getElementById('root')!);
+console.log('main.tsx loaded');
+
+const rootElement = document.getElementById('root');
+console.log('Root element:', rootElement);
+
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+const root = createRoot(rootElement);
+console.log('Root created, rendering App...');
+
 root.render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );
+
+console.log('App rendered');

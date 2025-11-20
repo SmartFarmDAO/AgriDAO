@@ -23,7 +23,9 @@ class StatusUpdate(BaseModel):
 @router.get("/", response_model=List[User])
 def list_users(current_user: User = Depends(get_current_user)) -> List[User]:
     """List all users (admin only)"""
-    if current_user.role.lower() != "admin":
+    # Handle both enum and string role values
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str.upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     with Session(engine) as session:
@@ -37,7 +39,8 @@ def update_user_role(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Update user role (admin only)"""
-    if current_user.role.lower() != "admin":
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str.upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     with Session(engine) as session:
@@ -63,7 +66,8 @@ def suspend_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Suspend a user (admin only)"""
-    if current_user.role.lower() != "admin":
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str.upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     with Session(engine) as session:
@@ -87,7 +91,8 @@ def activate_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Activate a suspended user (admin only)"""
-    if current_user.role.lower() != "admin":
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str.upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     with Session(engine) as session:
@@ -111,7 +116,8 @@ def get_user(user_id: int, current_user: User = Depends(get_current_user)) -> Us
             raise HTTPException(status_code=404, detail="User not found")
         
         # Users can only view their own profile unless they're admin
-        if user.id != current_user.id and current_user.role.lower() != "admin":
+        role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+        if user.id != current_user.id and role_str.upper() != "ADMIN":
             raise HTTPException(status_code=403, detail="Access denied")
         
         return user
@@ -120,7 +126,8 @@ def get_user(user_id: int, current_user: User = Depends(get_current_user)) -> Us
 @router.delete("/{user_id}", status_code=204)
 def delete_user(user_id: int, current_user: User = Depends(get_current_user)):
     """Delete a user (admin only)"""
-    if current_user.role.lower() != "admin":
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str.upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     with Session(engine) as session:
