@@ -1,0 +1,53 @@
+AgriDAO/
+│
+├── 📄 START_HERE.md              ← Start here!
+├── 📄 QUICK_START.md             ← Get running in 3 steps
+├── 📄 STRUCTURE.md               ← Understand the codebase
+├── 📄 README.md                  ← Full documentation
+├── 📄 CONTRIBUTING.md            ← How to contribute
+├── 📄 SECURITY.md                ← Security policy
+│
+├── 📁 frontend/                  ← React application
+│   ├── src/
+│   │   ├── components/          ← UI components
+│   │   ├── pages/               ← Page routes
+│   │   ├── hooks/               ← Custom hooks
+│   │   ├── lib/                 ← Utilities
+│   │   └── services/            ← API calls
+│   ├── e2e/                     ← E2E tests
+│   ├── public/                  ← Static files
+│   └── package.json
+│
+├── 📁 backend/                   ← FastAPI server
+│   ├── app/
+│   │   ├── routers/             ← API endpoints
+│   │   ├── models.py            ← Database models
+│   │   ├── schemas.py           ← Data schemas
+│   │   └── main.py              ← Entry point
+│   ├── tests/                   ← Backend tests
+│   ├── utils/                   ← Helper scripts
+│   └── requirements.txt
+│
+├── 📁 docs/                      ← All documentation
+│   ├── reports/                 ← Academic & project reports
+│   ├── fixes/                   ← Bug fix documentation
+│   ├── guides/                  ← How-to guides
+│   ├── troubleshooting/         ← Common issues
+│   ├── deployment/              ← Deployment guides
+│   └── INDEX.md                 ← Documentation index
+│
+├── 📁 scripts/                   ← Automation scripts
+│   ├── deploy.sh                ← Deployment
+│   ├── integration-test.sh      ← System tests
+│   └── test-marketplace.sh      ← Marketplace tests
+│
+├── 📁 mobile/                    ← React Native (future)
+│
+├── 🐳 docker-compose.yml         ← Development environment
+├── 🐳 docker-compose.prod.yml    ← Production environment
+└── 📄 .gitignore
+
+Quick Commands:
+  npm run dev              (frontend)
+  docker-compose up        (backend)
+  npm test                 (tests)

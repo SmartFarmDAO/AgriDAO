@@ -2,6 +2,8 @@
 
 A **production-ready** blockchain-enabled agricultural marketplace connecting farmers directly with consumers, restaurants, and retailers through smart contracts and decentralized governance.
 
+> **🚀 New here?** Start with **[START_HERE.md](./START_HERE.md)** or jump to **[QUICK_START.md](./QUICK_START.md)**
+
 ## 🌾 Project Overview
 
 AgriDAO is a comprehensive, enterprise-grade agricultural marketplace built with React 18, TypeScript, and modern web technologies. The platform has evolved into a full-featured solution with:
