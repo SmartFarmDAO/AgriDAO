@@ -324,7 +324,7 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$0.00</div>
+            <div className="text-2xl font-bold">৳0.00</div>
             <p className="text-xs text-muted-foreground mt-1">
               All time revenue
             </p>

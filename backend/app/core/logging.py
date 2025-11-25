@@ -213,7 +213,7 @@ def log_database_operation(operation: str, table: str, duration_ms: float,
 
 
 def log_payment_event(event_type: str, user_id: Optional[str] = None, 
-                     amount: Optional[float] = None, currency: str = "USD", 
+                     amount: Optional[float] = None, currency: str = "BDT", 
                      **kwargs):
     """Log payment-related events."""
     logger = get_logger("payment")

@@ -109,7 +109,7 @@ describe('AdminDashboard', () => {
       expect(screen.getByText('450')).toBeInTheDocument(); // Total orders
       expect(screen.getByText('300')).toBeInTheDocument(); // Total products
       expect(screen.getByText('12')).toBeInTheDocument(); // Total disputes
-      expect(screen.getByText('$45,000.00')).toBeInTheDocument(); // Total revenue
+      expect(screen.getByText('৳45,000.00')).toBeInTheDocument(); // Total revenue
     });
   });
 
@@ -143,7 +143,7 @@ describe('AdminDashboard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('#1')).toBeInTheDocument();
-      expect(screen.getByText('$50.00')).toBeInTheDocument();
+      expect(screen.getByText('৳50.00')).toBeInTheDocument();
     });
   });
 

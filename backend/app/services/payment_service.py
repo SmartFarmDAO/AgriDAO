@@ -46,7 +46,7 @@ class PaymentService:
     def create_payment_intent(
         self,
         amount: Decimal,
-        currency: str = "usd",
+        currency: str = "bdt",
         order_id: Optional[int] = None,
         customer_email: Optional[str] = None,
         metadata: Optional[Dict[str, str]] = None

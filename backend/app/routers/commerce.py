@@ -81,7 +81,7 @@ def create_checkout_session(payload: CreateCheckoutPayload, authorization: Optio
             line_items.append({
                 "quantity": int(item.quantity),
                 "price_data": {
-                    "currency": "usd",
+                    "currency": "bdt",
                     "unit_amount": int(product.price * 100),
                     "product_data": {"name": product.name},
                 },
@@ -109,7 +109,7 @@ def create_checkout_session(payload: CreateCheckoutPayload, authorization: Optio
                     {
                         "quantity": 1,
                         "price_data": {
-                            "currency": "usd",
+                            "currency": "bdt",
                             "unit_amount": int(platform_fee * 100),
                             "product_data": {"name": "Platform Fee"},
                         },
@@ -199,7 +199,7 @@ def create_checkout_session_v2(
         line_items.append({
             "quantity": item["quantity"],
             "price_data": {
-                "currency": "usd",
+                "currency": "bdt",
                 "unit_amount": int(item["unit_price"] * 100),
                 "product_data": {"name": item["product_name"]},
             },
@@ -210,7 +210,7 @@ def create_checkout_session_v2(
     line_items.append({
         "quantity": 1,
         "price_data": {
-            "currency": "usd",
+            "currency": "bdt",
             "unit_amount": int(pricing["platform_fee"] * 100),
             "product_data": {"name": "Platform Fee"},
         },
@@ -221,7 +221,7 @@ def create_checkout_session_v2(
         line_items.append({
             "quantity": 1,
             "price_data": {
-                "currency": "usd",
+                "currency": "bdt",
                 "unit_amount": int(pricing["tax_amount"] * 100),
                 "product_data": {"name": "Tax"},
             },

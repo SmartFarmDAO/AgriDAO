@@ -40,6 +40,7 @@ class Product(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=2000)
     category: Optional[str] = Field(default=None, max_length=100)
     price: Decimal = Field(decimal_places=2, max_digits=10)
+    quantity: Optional[str] = Field(default="1 piece", max_length=100)  # Legacy field for display
     quantity_available: int = Field(default=0, ge=0)
     unit: str = Field(default="piece", max_length=50)
     farmer_id: Optional[int] = Field(default=None, foreign_key="farmer.id")

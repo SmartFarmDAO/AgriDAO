@@ -84,19 +84,80 @@ def delete_user(
     current_user: User = Depends(require_admin)
 ):
     """Delete a user (admin only)"""
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        if user.id == current_user.id:
-            raise HTTPException(status_code=400, detail="Cannot delete yourself")
-        
-        # Delete related records
-        from ..models import UserSession
-        sessions = session.exec(select(UserSession).where(UserSession.user_id == user_id)).all()
-        for s in sessions:
-            session.delete(s)
-        
-        session.delete(user)
-        session.commit()
+    try:
+        with Session(engine) as session:
+            user = session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user.id == current_user.id:
+                raise HTTPException(status_code=400, detail="Cannot delete yourself")
+            
+            # Import all related models
+            from ..models import UserSession, Cart, Notification, Order, Farmer, Product
+            
+            # Check if user has orders - prevent deletion if they do
+            order_count = session.exec(
+                select(Order).where(Order.buyer_id == user_id)
+            ).all()
+            
+            if order_count:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Cannot delete user with {len(order_count)} existing orders. Please suspend the user instead."
+                )
+            
+            # Delete related records in correct order (respecting foreign key constraints)
+            
+            # 1. If user is a farmer, handle farmer-related data
+            user_role = user.role.value if hasattr(user.role, 'value') else str(user.role)
+            if user_role.upper() == 'FARMER':
+                # Find farmer record by email
+                farmer = session.exec(select(Farmer).where(Farmer.email == user.email)).first()
+                if farmer:
+                    # Check if farmer has products
+                    products = session.exec(select(Product).where(Product.farmer_id == farmer.id)).all()
+                    if products:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Cannot delete farmer with {len(products)} existing products. Please suspend the user instead."
+                        )
+                    
+                    # Delete farmer record
+                    session.delete(farmer)
+            
+            # 2. Delete user sessions
+            sessions = session.exec(select(UserSession).where(UserSession.user_id == user_id)).all()
+            for s in sessions:
+                session.delete(s)
+            
+            # 3. Delete notifications (if table exists)
+            try:
+                notifications = session.exec(select(Notification).where(Notification.user_id == user_id)).all()
+                for n in notifications:
+                    session.delete(n)
+            except Exception:
+                pass  # Table might not exist
+            
+            # 4. Delete carts
+            try:
+                carts = session.exec(select(Cart).where(Cart.user_id == user_id)).all()
+                for c in carts:
+                    session.delete(c)
+            except Exception:
+                pass  # Table might not exist
+            
+            # Commit deletions
+            session.commit()
+            
+            # Now delete the user
+            session.delete(user)
+            session.commit()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete user: {str(e)}"
+        )
