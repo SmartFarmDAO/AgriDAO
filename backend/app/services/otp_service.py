@@ -134,7 +134,10 @@ class OTPService:
             <head>
                 <style>
                     body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }}
-                    .header {{ background: #22c55e; color: white; padding: 20px; text-align: center; }}
+                    .header {{ background: linear-gradient(to right, #1e40af, #059669); padding: 30px 20px; text-align: center; }}
+                    .logo-container {{ display: flex; align-items: center; justify-content: center; gap: 8px; }}
+                    .leaf-icon {{ font-size: 32px; line-height: 1; }}
+                    .logo-text {{ font-size: 28px; font-weight: bold; color: white; }}
                     .content {{ padding: 30px; }}
                     .code {{ 
                         font-size: 36px; 
@@ -157,7 +160,10 @@ class OTPService:
             </head>
             <body>
                 <div class="header">
-                    <h1>🌾 AgriDAO</h1>
+                    <div class="logo-container">
+                        <span class="leaf-icon">🌱</span>
+                        <span class="logo-text">AgriDAO</span>
+                    </div>
                 </div>
                 <div class="content">
                     <h2>Verify Your Email</h2>

@@ -9,11 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Heart, DollarSign, TrendingUp, Users, CheckCircle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { donateToRequest, listFundingRequests, getFinanceMetrics, type FinanceMetrics } from "@/lib/api";
+import { donateToRequest, listFundingRequests, getFinanceMetrics, createFundingRequest, type FinanceMetrics } from "@/lib/api";
 import type { FundingRequest } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 const Finance = () => {
   const [selectedAmount, setSelectedAmount] = useState("");
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    purpose: "",
+    amount_needed: "",
+    description: "",
+    category: "Seeds & Supplies",
+    days_left: "30",
+  });
+  const { toast } = useToast();
 
   const queryClient = useQueryClient();
   const { data: fundingRequests, isLoading, isError } = useQuery<FundingRequest[]>({
@@ -31,8 +41,82 @@ const Finance = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fundingRequests"] });
       setSelectedAmount("");
+      setSelectedRequestId(null);
+      toast({
+        title: "Donation successful!",
+        description: "Thank you for supporting our farming community.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Donation failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
+
+  const createRequestMutation = useMutation({
+    mutationFn: (data: Partial<FundingRequest>) => createFundingRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fundingRequests"] });
+      setFormData({
+        purpose: "",
+        amount_needed: "",
+        description: "",
+        category: "Seeds & Supplies",
+        days_left: "30",
+      });
+      toast({
+        title: "Funding request created!",
+        description: "Your request has been submitted to the community.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create request",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDonate = (requestId: number) => {
+    const amount = parseFloat(selectedAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid donation amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    donateMutation.mutate({ id: requestId, amount });
+  };
+
+  const handleCreateRequest = () => {
+    const amount = parseFloat(formData.amount_needed);
+    const days = parseInt(formData.days_left);
+    
+    if (!formData.purpose || !amount || !formData.description || !days) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createRequestMutation.mutate({
+      purpose: formData.purpose,
+      amount_needed: amount,
+      description: formData.description,
+      category: formData.category,
+      days_left: days,
+      farmer_name: "Current User", // This should come from auth context
+      location: "Your Location", // This should come from user profile
+    });
+  };
 
   const quickAmounts = [50, 100, 250, 500, 1000];
 
@@ -155,8 +239,11 @@ const Finance = () => {
                                 key={amount} 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => setSelectedAmount(amount.toString())}
-                                className={selectedAmount === amount.toString() ? "bg-primary text-primary-foreground" : ""}
+                                onClick={() => {
+                                  setSelectedAmount(amount.toString());
+                                  setSelectedRequestId(request.id);
+                                }}
+                                className={selectedRequestId === request.id && selectedAmount === amount.toString() ? "bg-primary text-primary-foreground" : ""}
                               >
                                 ${amount}
                               </Button>
@@ -165,13 +252,20 @@ const Finance = () => {
                           <div className="flex gap-2">
                             <Input
                               placeholder="Custom amount"
-                              value={selectedAmount}
-                              onChange={(e) => setSelectedAmount(e.target.value)}
+                              value={selectedRequestId === request.id ? selectedAmount : ""}
+                              onChange={(e) => {
+                                setSelectedAmount(e.target.value);
+                                setSelectedRequestId(request.id);
+                              }}
                               type="number"
                             />
-                            <Button className="whitespace-nowrap">
+                            <Button 
+                              className="whitespace-nowrap"
+                              onClick={() => handleDonate(request.id)}
+                              disabled={donateMutation.isPending}
+                            >
                               <Heart className="h-4 w-4 mr-2" />
-                              Donate
+                              {donateMutation.isPending ? "Processing..." : "Donate"}
                             </Button>
                           </div>
                         </div>
@@ -203,11 +297,22 @@ const Finance = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="purpose">Purpose of Funding</Label>
-                    <Input id="purpose" placeholder="e.g., Organic Seeds Purchase" />
+                    <Input 
+                      id="purpose" 
+                      placeholder="e.g., Organic Seeds Purchase"
+                      value={formData.purpose}
+                      onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="amount">Amount Needed ($)</Label>
-                    <Input id="amount" placeholder="2500" type="number" />
+                    <Input 
+                      id="amount" 
+                      placeholder="2500" 
+                      type="number"
+                      value={formData.amount_needed}
+                      onChange={(e) => setFormData({ ...formData, amount_needed: e.target.value })}
+                    />
                   </div>
                 </div>
 
@@ -217,13 +322,20 @@ const Finance = () => {
                     id="description"
                     className="w-full min-h-24 px-3 py-2 border border-input rounded-md resize-none"
                     placeholder="Explain how the funding will be used and the expected impact on your farm..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <select id="category" className="w-full px-3 py-2 border border-input rounded-md">
+                    <select 
+                      id="category" 
+                      className="w-full px-3 py-2 border border-input rounded-md"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    >
                       <option>Seeds & Supplies</option>
                       <option>Equipment</option>
                       <option>Infrastructure</option>
@@ -233,7 +345,13 @@ const Finance = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="timeline">Timeline (days)</Label>
-                    <Input id="timeline" placeholder="30" type="number" />
+                    <Input 
+                      id="timeline" 
+                      placeholder="30" 
+                      type="number"
+                      value={formData.days_left}
+                      onChange={(e) => setFormData({ ...formData, days_left: e.target.value })}
+                    />
                   </div>
                 </div>
 
@@ -247,7 +365,13 @@ const Finance = () => {
                   </ul>
                 </div>
 
-                <Button className="w-full">Submit Funding Request</Button>
+                <Button 
+                  className="w-full"
+                  onClick={handleCreateRequest}
+                  disabled={createRequestMutation.isPending}
+                >
+                  {createRequestMutation.isPending ? "Submitting..." : "Submit Funding Request"}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

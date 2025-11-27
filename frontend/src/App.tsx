@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '@/config/wagmi';
+import { LanguageProvider } from '@/components/LanguageProvider';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Pages
@@ -31,6 +32,8 @@ import Dashboard from "./pages/Dashboard";
 import AddProduct from "./pages/AddProduct";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
+import Community from "./pages/Community";
+import BlockchainPage from "./pages/BlockchainPage";
 
 // Initialize query client
 const queryClient = new QueryClient({
@@ -98,6 +101,8 @@ const AppRoutes: React.FC = () => {
           <Route path="governance" element={<Governance />} />
           <Route path="ai" element={<AI />} />
           <Route path="admin" element={<AdminDashboard />} />
+          <Route path="community" element={<Community />} />
+          <Route path="blockchain" element={<BlockchainPage />} />
         </Route>
         
         {/* 404 - Not Found */}
@@ -152,11 +157,13 @@ const App: React.FC = () => {
             <TooltipProvider>
               <WalletProvider>
                 <AuthProvider>
-                  <ConfigProvider>
-                    <Toaster />
-                    <Sonner />
-                    <AppRoutes />
-                  </ConfigProvider>
+                  <LanguageProvider>
+                    <ConfigProvider>
+                      <Toaster />
+                      <Sonner />
+                      <AppRoutes />
+                    </ConfigProvider>
+                  </LanguageProvider>
                 </AuthProvider>
               </WalletProvider>
             </TooltipProvider>

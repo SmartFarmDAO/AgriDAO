@@ -108,6 +108,34 @@ class Proposal(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class Post(SQLModel, table=True):
+    """Social media post for community sharing."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    content: str = Field(max_length=1000)
+    image_url: Optional[str] = None
+    likes_count: int = Field(default=0)
+    comments_count: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Comment(SQLModel, table=True):
+    """Comment on a post."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id")
+    user_id: int = Field(foreign_key="user.id")
+    content: str = Field(max_length=500)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Like(SQLModel, table=True):
+    """Like on a post."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id")
+    user_id: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class ProvenanceAsset(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str

@@ -7,6 +7,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { NavLink } from "./NavLink";
 import { CartButton } from "./CartButton";
 import { UserMenu } from "./UserMenu";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useTranslation } from "@/i18n/config";
 
 type CartItem = {
   product_id: number;
@@ -23,6 +25,7 @@ export function AppHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const u = secureStorage.get<{ id: number; email: string; role: string }>("current_user");
@@ -139,13 +142,13 @@ export function AppHeader() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-1">
-          <NavLink to="/marketplace">Marketplace</NavLink>
-          <NavLink to="/finance">Finance</NavLink>
-          <NavLink to="/supply-chain">Supply Chain</NavLink>
-          <NavLink to="/governance">Governance</NavLink>
+          <NavLink to="/marketplace">{t('common.marketplace')}</NavLink>
+          <NavLink to="/finance">{t('common.finance')}</NavLink>
+          <NavLink to="/supply-chain">{t('common.supplyChain')}</NavLink>
+          <NavLink to="/governance">{t('common.governance')}</NavLink>
           <NavLink to="/ai">
             <span className="flex items-center">
-              AI Assistant
+              {t('common.aiAssistant')}
               <span className="ml-1.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 px-2 py-0.5 text-xs font-medium text-white">
                 New
               </span>
@@ -178,6 +181,9 @@ export function AppHeader() {
           {/* Cart */}
           <CartButton cartCount={cartCount} cartItems={cartItems} />
 
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
           {/* User menu */}
           {userEmail ? (
             <UserMenu userEmail={userEmail} />
@@ -186,7 +192,7 @@ export function AppHeader() {
               onClick={() => navigate('/auth')} 
               className="hidden md:flex items-center space-x-1.5 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
             >
-              <span>Sign In</span>
+              <span>{t('common.signIn')}</span>
             </Button>
           )}
         </div>
@@ -196,13 +202,13 @@ export function AppHeader() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t bg-white">
           <div className="px-2 pt-2 pb-3 space-y-1">
-            <NavLink to="/marketplace" className="block px-3 py-2">Marketplace</NavLink>
-            <NavLink to="/finance" className="block px-3 py-2">Finance</NavLink>
-            <NavLink to="/supply-chain" className="block px-3 py-2">Supply Chain</NavLink>
-            <NavLink to="/governance" className="block px-3 py-2">Governance</NavLink>
+            <NavLink to="/marketplace" className="block px-3 py-2">{t('common.marketplace')}</NavLink>
+            <NavLink to="/finance" className="block px-3 py-2">{t('common.finance')}</NavLink>
+            <NavLink to="/supply-chain" className="block px-3 py-2">{t('common.supplyChain')}</NavLink>
+            <NavLink to="/governance" className="block px-3 py-2">{t('common.governance')}</NavLink>
             <NavLink to="/ai" className="block px-3 py-2">
               <span className="flex items-center">
-                AI Assistant
+                {t('common.aiAssistant')}
                 <span className="ml-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 px-2 py-0.5 text-xs font-medium text-white">
                   New
                 </span>
@@ -213,7 +219,7 @@ export function AppHeader() {
                 onClick={() => navigate('/auth')} 
                 className="w-full mt-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
               >
-                Sign In
+                {t('common.signIn')}
               </Button>
             )}
           </div>

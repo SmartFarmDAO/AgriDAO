@@ -23,6 +23,7 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
+import { ProductRecommendations } from "@/components/ProductRecommendations";
 
 const Index = () => {
   const { isAuthenticated } = useAuth();
@@ -420,6 +421,13 @@ const Index = () => {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Product Recommendations */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <ProductRecommendations type="trending" limit={6} />
         </div>
       </section>
 

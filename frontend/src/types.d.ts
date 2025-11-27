@@ -90,3 +90,22 @@ export interface Proposal {
   status: "open" | "passed" | "rejected";
   created_at: string;
 }
+
+export interface Post {
+  id: number;
+  user_id: number;
+  content: string;
+  image_url?: string;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+}
