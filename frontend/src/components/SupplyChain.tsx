@@ -35,6 +35,7 @@ export default function SupplyChain() {
     try {
       const res = await fetch('http://localhost:8000/supplychain/assets');
       const data = await res.json();
+      console.log('Fetched assets:', data);
       setAssets(data);
     } catch (error) {
       console.error('Failed to fetch assets:', error);
@@ -126,7 +127,10 @@ export default function SupplyChain() {
             {assets.map((asset) => (
               <div
                 key={asset.id}
-                onClick={() => setSelectedAsset(asset)}
+                onClick={() => {
+                  console.log('Selected asset:', asset);
+                  setSelectedAsset(asset);
+                }}
                 className={`p-4 border rounded-lg cursor-pointer hover:border-green-500 ${
                   selectedAsset?.id === asset.id ? 'border-green-500 bg-green-50' : ''
                 }`}
@@ -134,6 +138,9 @@ export default function SupplyChain() {
                 <h3 className="font-semibold">{asset.name}</h3>
                 <p className="text-sm text-gray-600">From: {asset.origin}</p>
                 <p className="text-sm text-gray-600">Current: {asset.current_location}</p>
+                {asset.notes && (
+                  <p className="text-sm text-gray-500 mt-2 italic">Note: {asset.notes}</p>
+                )}
               </div>
             ))}
           </div>
@@ -165,6 +172,7 @@ export default function SupplyChain() {
               </div>
               {selectedAsset.notes && (
                 <div className="mt-4 p-3 bg-gray-50 rounded">
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Notes:</p>
                   <p className="text-sm text-gray-700">{selectedAsset.notes}</p>
                 </div>
               )}

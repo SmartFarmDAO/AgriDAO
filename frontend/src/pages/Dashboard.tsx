@@ -121,6 +121,7 @@ export default function Dashboard() {
   const handleToggleStatus = async (productId: number, currentStatus: string) => {
     try {
       const token = secureStorage.get<string>('access_token');
+      console.log('Token retrieved:', token ? 'exists' : 'missing');
       if (!token) {
         toast({
           title: "Error",
@@ -131,6 +132,7 @@ export default function Dashboard() {
       }
 
       const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      console.log('Updating product', productId, 'to', newStatus);
       
       const response = await fetch(`/api/marketplace/products/${productId}/status?status=${newStatus}`, {
         method: 'PATCH',

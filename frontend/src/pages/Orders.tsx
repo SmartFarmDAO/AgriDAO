@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { listMyOrders } from "@/lib/api";
-import { Order } from "@/types";
+import type { Order } from "@/types";
 import {
   Table,
   TableBody,
@@ -27,14 +27,16 @@ const OrdersPage = () => {
         const data = await listMyOrders();
         setOrders(data);
       } catch (err) {
-        setError("Failed to fetch orders.");
+        const errorMsg = "Failed to fetch orders.";
+        setError(errorMsg);
         console.error(err);
+        toast({ title: "Orders Error", description: errorMsg, variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
     fetchOrders();
-  }, []);
+  }, [toast]);
 
   // If redirected from Stripe success with ?order_id=..., jump to detail
   useEffect(() => {
@@ -46,9 +48,7 @@ const OrdersPage = () => {
   }, [location.search, navigate]);
 
   if (loading) return <div>Loading...</div>;
-  if (error) {
-    toast({ title: "Orders Error", description: error, variant: "destructive" });
-  }
+  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="container mx-auto p-4">

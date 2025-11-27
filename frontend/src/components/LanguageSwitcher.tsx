@@ -11,8 +11,6 @@ import { useTranslation, Language } from '@/i18n/config';
 const languages: { code: Language; name: string; flag: string }[] = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
   { code: 'bn', name: 'বাংলা', flag: '🇧🇩' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
 ];
 
 export const LanguageSwitcher = () => {
