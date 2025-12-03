@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgriDAO - Agricultural Marketplace</title>
+    <meta name="description" content="Connect farmers with ethical lenders and buyers through a transparent marketplace and financing system" />
+    <meta name="author" content="AgriDAO" />
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#16a34a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AgriDAO" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    
+    <!-- Security headers should be set by the server, not via meta tags. The CSP is kept as a meta for local dev. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http: https: ws: wss: http://localhost:8080 http://127.0.0.1:8080 https://api.web3modal.org https://pulse.walletconnect.org; frame-src 'none'; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <!-- X-Frame-Options must be set via HTTP header; removed to avoid console warning -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
+    <meta property="og:title" content="AgriDAO - Agricultural Marketplace" />
+    <meta property="og:description" content="Connect farmers with ethical lenders and buyers through a transparent marketplace and financing system" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icons/og-image.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@agridao" />
+    <meta name="twitter:image" content="/icons/og-image.png" />
+    
+    <!-- Mobile optimization -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
