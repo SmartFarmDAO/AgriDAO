@@ -44,20 +44,16 @@ def request_otp(payload: OTPRequest):
     """Request OTP via email"""
     result = otp_service.send_otp_email(payload.email)
     
-    if result["success"]:
-        return {
-            "sent": True,
-            "expires_in": result["expires_in"]
-        }
-    else:
-        # Fallback for development
-        code = otp_service.generate_otp()
-        otp_service.otp_store[payload.email] = {
-            "code": code,
-            "exp": time.time() + 300,
-            "attempts": 0
-        }
-        return {"sent": True, "dev_code": code}
+    response = {
+        "sent": True,
+        "expires_in": result.get("expires_in", 300)
+    }
+    
+    # Include dev_code if available (development mode or email failure)
+    if "dev_code" in result and result["dev_code"]:
+        response["dev_code"] = result["dev_code"]
+    
+    return response
 
 
 @router.post("/otp/verify")

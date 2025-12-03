@@ -20,6 +20,9 @@ class OTPService:
         self.otp_expiry = 300  # 5 minutes
         self.max_attempts = 3
         
+        # Development mode
+        self.dev_mode = os.getenv("ENVIRONMENT", "development") == "development"
+        
         # Email configuration
         self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("SMTP_PORT", "465"))
@@ -27,6 +30,9 @@ class OTPService:
         self.smtp_password = os.getenv("SMTP_PASSWORD", "")
         self.from_email = os.getenv("FROM_EMAIL", "smartfarmdao@gmail.com")
         self.from_name = os.getenv("FROM_NAME", "AgriDAO")
+        
+        # Check if email is properly configured
+        self.email_configured = bool(self.smtp_password)
         
         # SMS configuration
         self.sms_provider = os.getenv("SMS_PROVIDER", "none")
@@ -52,6 +58,15 @@ class OTPService:
             "attempts": 0
         }
         
+        # In development mode or if email not configured, skip sending
+        if self.dev_mode or not self.email_configured:
+            logger.warning(f"Email not configured or in dev mode. OTP code: {code}")
+            return {
+                "success": False,
+                "expires_in": self.otp_expiry,
+                "dev_code": code if self.dev_mode else None
+            }
+        
         # Send email
         try:
             success = self._send_email(email, code)
@@ -63,7 +78,8 @@ class OTPService:
             logger.error(f"Failed to send OTP email: {e}")
             return {
                 "success": False,
-                "error": str(e)
+                "error": str(e),
+                "dev_code": code if self.dev_mode else None
             }
     
     def send_otp_sms(self, phone: str) -> Dict[str, any]:
