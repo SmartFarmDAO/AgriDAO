@@ -150,13 +150,12 @@ deployment/
 
 ```
 docs/
-├── api/              # API documentation
-├── architecture/     # System architecture docs
-├── deployment/       # Deployment guides
-├── development/      # Development guides
-├── guides/          # Feature guides
-├── reports/         # Project reports
-└── troubleshooting/ # Common issues and fixes
+├── README.md            # Documentation index
+├── getting-started/     # Setup and installation guides
+├── api/                 # API documentation
+├── architecture/        # System architecture docs
+├── deployment/          # Deployment guides
+└── guides/              # Feature guides
 ```
 
 ## Naming Conventions
