@@ -1,6 +1,0 @@
-agent:
-  name: "ui_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "ui_tasks"
-  dependencies: []

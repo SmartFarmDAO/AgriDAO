@@ -1,6 +1,0 @@
-agent:
-  name: "web3_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "web3_tasks"
-  dependencies: []

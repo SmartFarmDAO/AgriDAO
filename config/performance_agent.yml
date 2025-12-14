@@ -1,6 +1,0 @@
-agent:
-  name: "performance_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "performance_tasks"
-  dependencies: []

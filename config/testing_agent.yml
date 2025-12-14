@@ -1,6 +1,0 @@
-agent:
-  name: "testing_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "testing_tasks"
-  dependencies: []

@@ -1,6 +1,0 @@
-agent:
-  name: "integration_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "integration_tasks"
-  dependencies: []

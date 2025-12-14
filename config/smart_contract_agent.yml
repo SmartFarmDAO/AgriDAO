@@ -1,6 +1,0 @@
-agent:
-  name: "smart_contract_agent"
-  type: "worker"
-  max_concurrent_tasks: 3
-  queue: "smart_contract_tasks"
-  dependencies: []
