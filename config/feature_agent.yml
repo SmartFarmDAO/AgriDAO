@@ -1,0 +1,6 @@
+agent:
+  name: "feature_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "feature_tasks"
+  dependencies: []

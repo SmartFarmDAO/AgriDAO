@@ -1,0 +1,6 @@
+agent:
+  name: "auth_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "auth_tasks"
+  dependencies: []

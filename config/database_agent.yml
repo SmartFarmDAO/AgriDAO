@@ -1,0 +1,6 @@
+agent:
+  name: "database_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "database_tasks"
+  dependencies: []

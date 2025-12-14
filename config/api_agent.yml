@@ -1,0 +1,6 @@
+agent:
+  name: "api_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "api_tasks"
+  dependencies: []

@@ -1,0 +1,6 @@
+agent:
+  name: "security_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "security_tasks"
+  dependencies: []

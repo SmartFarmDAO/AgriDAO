@@ -1,0 +1,5 @@
+agent:
+  name: "orchestrator_agent"
+  type: "coordinator"
+  max_concurrent_tasks: 10
+  queue: "orchestrator_tasks"

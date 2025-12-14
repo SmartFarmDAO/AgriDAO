@@ -1,0 +1,6 @@
+agent:
+  name: "state_agent"
+  type: "worker"
+  max_concurrent_tasks: 3
+  queue: "state_tasks"
+  dependencies: []

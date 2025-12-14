@@ -3,6 +3,7 @@ import time
 from typing import Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
@@ -10,6 +11,7 @@ from ..database import engine
 from ..models import User, UserRole
 from ..services.auth import token_manager
 from ..services.otp_service import otp_service
+from ..services.google_oauth import google_oauth_service
 from ..deps import get_current_user
 from ..middleware.security import get_csrf_middleware
 
@@ -166,5 +168,126 @@ def get_csrf_token():
         return {"csrf_token": token}
     else:
         raise HTTPException(status_code=500, detail="CSRF protection not available")
+
+
+@router.get("/google/login")
+def google_login(redirect_uri: Optional[str] = None):
+    """Initiate Google OAuth login"""
+    if not google_oauth_service.enabled:
+        raise HTTPException(status_code=503, detail="Google OAuth not configured")
+    
+    auth_url = google_oauth_service.get_authorization_url(redirect_uri)
+    return {"authorization_url": auth_url}
+
+
+@router.get("/google/callback")
+async def google_callback(code: str, state: Optional[str] = None):
+    """Handle Google OAuth callback"""
+    if not google_oauth_service.enabled:
+        raise HTTPException(status_code=503, detail="Google OAuth not configured")
+    
+    # Exchange code for user info
+    user_info = await google_oauth_service.exchange_code(code)
+    
+    if not user_info:
+        raise HTTPException(status_code=400, detail="Failed to authenticate with Google")
+    
+    # Get or create user
+    with Session(engine) as session:
+        email = user_info.get("email")
+        name = user_info.get("name", email.split("@")[0])
+        picture = user_info.get("picture")
+        
+        # Check if user exists
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
+        
+        if not user:
+            # Create new user
+            user = User(
+                email=email,
+                name=name,
+                role=UserRole.BUYER,  # Default role
+                email_verified=True,  # Google emails are verified
+                status="active"
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        
+        # Generate tokens
+        access_token = token_manager.create_access_token(user)
+        refresh_token = token_manager.create_refresh_token(user)
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+                "name": user.name,
+                "email_verified": user.email_verified
+            }
+        }
+
+
+class GoogleTokenVerify(BaseModel):
+    token: str
+
+
+@router.post("/google/verify")
+async def google_verify_token(payload: GoogleTokenVerify):
+    """Verify Google ID token and authenticate user"""
+    if not google_oauth_service.enabled:
+        raise HTTPException(status_code=503, detail="Google OAuth not configured")
+    
+    # Verify token and get user info
+    user_info = await google_oauth_service.verify_token(payload.token)
+    
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+    
+    # Get or create user
+    with Session(engine) as session:
+        email = user_info.get("email")
+        name = user_info.get("name", email.split("@")[0])
+        
+        # Check if user exists
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
+        
+        if not user:
+            # Create new user
+            user = User(
+                email=email,
+                name=name,
+                role=UserRole.BUYER,
+                email_verified=True,
+                status="active"
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        
+        # Generate tokens
+        access_token = token_manager.create_access_token(user)
+        refresh_token = token_manager.create_refresh_token(user)
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+                "name": user.name,
+                "email_verified": user.email_verified
+            }
+        }
 
 
