@@ -19,9 +19,9 @@ import {
 import { 
   Users, ShoppingCart, Package, DollarSign, 
   Search, Trash2, Ban, CheckCircle, TrendingUp,
-  Activity, BarChart3, Shield, AlertTriangle, UserX
+  Activity, BarChart3, Shield, AlertTriangle, UserX, Bot
 } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
+import { AgentOrchestration } from '@/components/AgentOrchestration';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users" className="gap-2">
             <Users className="h-4 w-4" />
             Users
@@ -346,6 +346,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="orders" className="gap-2">
             <ShoppingCart className="h-4 w-4" />
             Orders
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="gap-2">
+            <Bot className="h-4 w-4" />
+            Agents
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -599,6 +603,11 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Agent Orchestration Tab */}
+        <TabsContent value="agents" className="space-y-6">
+          <AgentOrchestration />
         </TabsContent>
 
         {/* Analytics Tab */}
