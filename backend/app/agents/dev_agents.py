@@ -220,13 +220,44 @@ class DatabaseDevAgent(BaseAgent):
                     "exit_code": result.returncode,
                     "stdout": result.stdout,
                     "stderr": result.stderr,
-                    "status": "success" if result.returncode == 0 else "failed"
+                    "status": "success" if result.returncode == 0 else "failed",
+                    "note": "Database connection required for migration generation"
                 }
             }
         except Exception as e:
+            # Generate manual migration template when DB is offline
+            migration_template = f'''"""create {description}
+
+Revision ID: manual_revision
+Revises: 
+Create Date: {data.get("timestamp", "2024-01-01 00:00:00")}
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers
+revision = 'manual_revision'
+down_revision = None
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    # Add your upgrade operations here
+    pass
+
+def downgrade():
+    # Add your downgrade operations here
+    pass
+'''
             return {
                 "agent_id": self.agent_id,
-                "result": {"error": str(e), "status": "error"}
+                "result": {
+                    "code_generated": migration_template,
+                    "file_path": f"backend/alembic/versions/manual_{description.replace(' ', '_')}.py",
+                    "status": "offline_template",
+                    "note": "Generated template migration (database offline)"
+                }
             }
     
     async def _run_migration(self) -> Dict[str, Any]:
