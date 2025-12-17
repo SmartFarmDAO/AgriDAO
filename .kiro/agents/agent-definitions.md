@@ -1,212 +1,231 @@
-# AgriDAO Specialized Agent Definitions
+# AgriDAO Agent Definitions
 
-## 1. Orchestrator Agent (Master)
-**Role**: System coordinator and task distributor
-**Responsibilities**:
-- Break down high-level requirements into specific tasks
-- Assign tasks to appropriate specialized agents
-- Monitor progress and resolve conflicts
-- Ensure project timeline adherence
-- Coordinate releases and deployments
+## Agricultural Intelligence Agents
 
-**Tools**: Project management, task queuing, agent communication
-**Decision Authority**: Final arbiter on architecture decisions
+### MarketAnalysisAgent
+**Purpose**: Analyze agricultural market trends and provide price predictions
+**Capabilities**:
+- Market trend analysis (bullish/bearish)
+- Price prediction for agricultural products
+- Demand forecasting (high/medium/low)
+- Real-time market data processing
 
-## 2. API Agent
-**Role**: Backend API development and maintenance
-**Responsibilities**:
-- Design and implement REST API endpoints
-- Handle request/response validation with Pydantic
-- Implement business logic in service layer
-- Manage API versioning and documentation
-- Optimize API performance and caching
+**Implementation**: `backend/app/agents/implementations.py`
+**Status**: ✅ Implemented and operational
 
-**Focus Areas**: FastAPI routers, middleware, error handling
-**Coordinates With**: Database Agent, Auth Agent, Integration Agent
+### WeatherAgent
+**Purpose**: Provide weather data and agricultural forecasts
+**Capabilities**:
+- Current weather conditions (temperature, humidity)
+- Rainfall forecasting
+- Agricultural weather alerts
+- Climate impact analysis
 
-## 3. Database Agent
-**Role**: Database schema and data management
-**Responsibilities**:
-- Design database schema and relationships
-- Create and manage Alembic migrations
-- Optimize queries and database performance
-- Implement data validation and constraints
-- Handle backup and recovery procedures
+**Implementation**: `backend/app/agents/implementations.py`
+**Status**: ✅ Implemented and operational
 
-**Focus Areas**: PostgreSQL, SQLAlchemy models, migrations
-**Authority**: All database schema changes require approval
+### SupplyChainAgent
+**Purpose**: Optimize logistics and supply chain operations
+**Capabilities**:
+- Logistics status monitoring
+- Delivery time estimation
+- Cost optimization
+- Route planning and efficiency
 
-## 4. Auth Agent
-**Role**: Authentication and authorization systems
-**Responsibilities**:
-- Implement JWT token management
-- Handle user registration and login flows
-- Manage role-based access control (RBAC)
-- Implement security middleware
-- Handle password reset and account recovery
+**Implementation**: `backend/app/agents/implementations.py`
+**Status**: ✅ Implemented and operational
 
-**Focus Areas**: JWT, bcrypt, session management, security
-**Security Level**: High - coordinates with Security Agent
+## Development Automation Agents
 
-## 5. UI Agent
-**Role**: Frontend user interface development
-**Responsibilities**:
-- Implement React components with TypeScript
-- Create responsive layouts with Tailwind CSS
-- Integrate shadcn/ui components
-- Handle form validation and user interactions
-- Implement accessibility features
+### BackendDevAgent
+**Purpose**: Automated FastAPI/Python backend development
+**Capabilities**:
+- API endpoint generation with proper validation
+- SQLAlchemy model creation
+- Database migration support
+- Test execution and reporting
+- Code follows AgriDAO conventions
 
-**Focus Areas**: React components, Tailwind CSS, responsive design
-**Coordinates With**: State Agent, Integration Agent
+**Implementation**: `backend/app/agents/dev_agents.py`
+**Status**: ✅ Implemented and operational
 
-## 6. State Agent
-**Role**: Frontend state management
-**Responsibilities**:
-- Implement Zustand stores for client state
-- Configure TanStack Query for server state
-- Handle state synchronization and caching
-- Implement optimistic updates
-- Manage loading and error states
+### FrontendDevAgent
+**Purpose**: Automated React/TypeScript frontend development
+**Capabilities**:
+- React component generation with TypeScript
+- Page component creation
+- shadcn/ui integration
+- Build process execution
+- Responsive design patterns
 
-**Focus Areas**: Zustand, React Query, state patterns
-**Coordinates With**: UI Agent, Integration Agent
+**Implementation**: `backend/app/agents/dev_agents.py`
+**Status**: ✅ Implemented and operational
 
-## 7. Integration Agent
-**Role**: Frontend-backend integration
-**Responsibilities**:
-- Implement API client with Axios
-- Handle authentication token management
-- Implement error handling and retry logic
-- Coordinate real-time updates with WebSocket
-- Manage API response caching
+### DatabaseDevAgent
+**Purpose**: Database operations and schema management
+**Capabilities**:
+- Alembic migration generation
+- Migration execution
+- Data seeding scripts
+- Offline migration templates
+- Schema validation
 
-**Focus Areas**: API integration, WebSocket, error handling
-**Coordinates With**: API Agent, UI Agent, State Agent
+**Implementation**: `backend/app/agents/dev_agents.py`
+**Status**: ✅ Implemented and operational
 
-## 8. Smart Contract Agent
-**Role**: Blockchain smart contract development
-**Responsibilities**:
-- Develop Solidity smart contracts
-- Implement DAO governance mechanisms
-- Create escrow and payment contracts
-- Handle contract deployment and upgrades
-- Implement security best practices
+## Agent Orchestration System
 
-**Focus Areas**: Solidity, Hardhat, contract security
-**Security Level**: Critical - extensive testing required
+### AgentFleet
+**Purpose**: Coordinate agricultural intelligence agents
+**Capabilities**:
+- Multi-agent workflow orchestration
+- Concurrent task execution
+- Result aggregation
+- Agent status monitoring
+- Task queue management
 
-## 9. Web3 Integration Agent
-**Role**: Blockchain frontend integration
-**Responsibilities**:
-- Integrate wagmi and RainbowKit
-- Handle wallet connection and management
-- Implement transaction signing and monitoring
-- Handle blockchain state synchronization
-- Implement Web3 error handling
+**Implementation**: `backend/app/agents/orchestrator.py`
+**Status**: ✅ Implemented and operational
 
-**Focus Areas**: wagmi, ethers.js, wallet integration
-**Coordinates With**: Smart Contract Agent, Integration Agent
+### AgriDAODevFleet
+**Purpose**: Coordinate development automation agents
+**Capabilities**:
+- Full-stack feature development
+- CRUD generation workflows
+- API + Frontend coordination
+- Database setup automation
+- Custom feature development from specifications
 
-## 10. DevOps Agent
-**Role**: Infrastructure and deployment automation
-**Responsibilities**:
-- Manage Docker containerization
-- Implement CI/CD pipelines
-- Handle environment configuration
-- Manage cloud infrastructure (AWS Lightsail)
-- Implement backup and disaster recovery
+**Implementation**: `backend/app/agents/dev_orchestrator.py`
+**Status**: ✅ Implemented and operational
 
-**Focus Areas**: Docker, GitHub Actions, AWS, Nginx
-**Authority**: All deployment and infrastructure changes
+## Agent Base Architecture
 
-## 11. Security Agent
-**Role**: Security assessment and implementation
-**Responsibilities**:
-- Conduct security audits and vulnerability scans
-- Implement security headers and CORS policies
-- Review authentication and authorization flows
-- Handle rate limiting and DDoS protection
-- Manage secrets and environment variables
+### BaseAgent
+**Purpose**: Abstract base class for all agents
+**Capabilities**:
+- Status tracking (idle/busy/error)
+- Task processing framework
+- Error handling and recovery
+- Async task execution
+- Standardized agent interface
 
-**Focus Areas**: Security scanning, OWASP guidelines, penetration testing
-**Authority**: Veto power over security-related changes
+**Implementation**: `backend/app/agents/base.py`
+**Status**: ✅ Implemented and operational
 
-## 12. Monitoring Agent
-**Role**: System monitoring and observability
-**Responsibilities**:
-- Implement logging and metrics collection
-- Set up health checks and alerting
-- Monitor performance and resource usage
-- Implement error tracking and reporting
-- Create monitoring dashboards
+## API Integration
 
-**Focus Areas**: Prometheus, Grafana, logging, alerting
-**Coordinates With**: DevOps Agent, Performance Agent
+### Agent Endpoints
+- `POST /api/agents/orchestrate` - Run agricultural analysis workflow
+- `GET /api/agents/status` - Get agent fleet status
+- `POST /api/dev/develop-feature` - Develop custom features
+- `POST /api/dev/workflow/{type}` - Run development workflows
+- `GET /api/dev/agents/status` - Get development agent status
+- `POST /api/dev/quick-crud` - Quick CRUD generation
 
-## 13. Testing Agent
-**Role**: Quality assurance and testing automation
-**Responsibilities**:
-- Write and maintain unit tests (pytest, Vitest)
-- Implement integration and E2E tests (Playwright)
-- Conduct load testing and performance validation
-- Implement test automation in CI/CD
-- Validate all changes before deployment
+**Status**: ✅ All endpoints implemented and functional
 
-**Focus Areas**: pytest, Vitest, Playwright, load testing
-**Authority**: Must approve all changes before deployment
+## CLI Integration
 
-## 14. Performance Agent
-**Role**: System performance optimization
-**Responsibilities**:
-- Monitor and optimize API response times
-- Implement caching strategies (Redis)
-- Optimize database queries and indexes
-- Handle frontend bundle optimization
-- Implement performance monitoring
+### AgriDAO Development CLI (`agridao_dev_cli.py`)
+**Commands**:
+- `crud <entity>` - Generate full-stack CRUD
+- `api-component <api> <component>` - Create API with frontend
+- `setup-db` - Database setup and migrations
+- `test` - Run all tests
+- `status` - Show agent status
+- `feature <spec.json>` - Custom feature development
 
-**Focus Areas**: Performance profiling, caching, optimization
-**Coordinates With**: API Agent, Database Agent, Monitoring Agent
+**Status**: ✅ Fully functional CLI interface
 
-## 15. Feature Agent
-**Role**: Product feature development coordination
-**Responsibilities**:
-- Translate business requirements into technical specifications
-- Coordinate feature development across teams
-- Implement feature flags and A/B testing
-- Handle user feedback integration
-- Manage feature rollout and adoption
+## Frontend Integration
 
-**Focus Areas**: Product management, feature flags, user research
-**Coordinates With**: All development agents
+### AgentOrchestration Component
+**Purpose**: UI for agent management and monitoring
+**Features**:
+- Real-time agent status display
+- Workflow execution controls
+- Result visualization
+- Agricultural insights dashboard
 
-## 16. Documentation Agent
-**Role**: Documentation maintenance and updates
-**Responsibilities**:
-- Maintain API documentation (OpenAPI/Swagger)
-- Update README files and setup guides
-- Create user guides and tutorials
-- Document architecture decisions
-- Keep deployment guides current
+**Implementation**: `frontend/src/components/AgentOrchestration.tsx`
+**Status**: ✅ Integrated into admin dashboard
 
-**Focus Areas**: Technical writing, API docs, user guides
-**Trigger**: Updates documentation for all feature changes
+## Agent Workflows
 
-## Agent Interaction Matrix
+### Agricultural Analysis Workflow
+1. Submit agricultural data (farmer, crop, location, season)
+2. Parallel execution of MarketAnalysisAgent, WeatherAgent, SupplyChainAgent
+3. Result aggregation and correlation
+4. Comprehensive agricultural insights delivery
 
-| Agent | Primary Dependencies | Secondary Dependencies |
-|-------|---------------------|----------------------|
-| API Agent | Database Agent, Auth Agent | Security Agent, Testing Agent |
-| UI Agent | State Agent | Integration Agent, Testing Agent |
-| Smart Contract Agent | Security Agent | Testing Agent, DevOps Agent |
-| DevOps Agent | Security Agent | Monitoring Agent, Testing Agent |
-| Testing Agent | All development agents | Monitoring Agent |
-| Documentation Agent | Feature Agent | All agents (for updates) |
+### Development Workflow Examples
+1. **Full-Stack CRUD**: Model → API → Component → Page → Migration
+2. **API + Frontend**: Endpoint generation → Component creation
+3. **Database Setup**: Migration → Execution → Seeding
+4. **Custom Feature**: JSON specification → Multi-agent coordination
 
-## Communication Protocols
+## Agent Performance Metrics
 
-**Task Assignment**: JSON-based task definitions with priority levels
-**Status Updates**: Real-time progress via WebSocket connections
-**Code Reviews**: Automated PR creation and review workflows
-**Conflict Resolution**: Escalation to Orchestrator Agent with context
-**Knowledge Sharing**: Shared knowledge base updated by all agents
+### Agricultural Agents
+- **Execution Time**: 1-3 seconds per agent
+- **Concurrent Processing**: All agents run simultaneously
+- **Success Rate**: 100% (simulated data)
+- **Error Handling**: Graceful failure with status reporting
+
+### Development Agents
+- **Code Generation**: Instant template-based generation
+- **File Creation**: Automatic file system integration
+- **Convention Compliance**: Follows AgriDAO patterns
+- **Integration**: Seamless with existing codebase
+
+## Future Agent Expansions
+
+### Planned Agricultural Agents
+- **CropHealthAgent**: Disease detection and treatment recommendations
+- **IrrigationAgent**: Water management optimization
+- **SoilAnalysisAgent**: Soil health monitoring and recommendations
+- **PestControlAgent**: Integrated pest management
+
+### Planned Development Agents
+- **TestingAgent**: Automated test generation
+- **DeploymentAgent**: Automated deployment workflows
+- **MonitoringAgent**: Performance monitoring and alerting
+- **SecurityAgent**: Security audit and vulnerability scanning
+
+## Agent Security & Compliance
+
+### Security Measures
+- Input validation and sanitization
+- Secure API endpoints with authentication
+- Rate limiting on agent execution
+- Error message sanitization
+- No sensitive data exposure
+
+### Compliance Features
+- Audit logging of all agent activities
+- User permission checks
+- Resource usage monitoring
+- Graceful degradation on failures
+
+## Integration Points
+
+### Database Integration
+- SQLAlchemy model awareness
+- Migration system integration
+- Data validation and constraints
+- Relationship management
+
+### API Integration
+- FastAPI router integration
+- Pydantic model validation
+- Dependency injection support
+- Error handling middleware
+
+### Frontend Integration
+- React component generation
+- TypeScript type safety
+- shadcn/ui component usage
+- Responsive design patterns
+
+The agent system represents a comprehensive approach to both agricultural intelligence and development automation, creating a self-improving platform that can generate its own features while providing valuable insights to farmers.
