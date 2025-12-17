@@ -1,0 +1,39 @@
+{
+  "name": "Farmer Profile Management",
+  "components": ["backend", "frontend", "database"],
+  "backend": {
+    "api_endpoint": {
+      "router": "farmers",
+      "endpoint": "update_profile",
+      "method": "PUT"
+    },
+    "model": {
+      "name": "FarmerProfile",
+      "fields": [
+        {"name": "farmer_id", "type": "Integer"},
+        {"name": "farm_size", "type": "Float"},
+        {"name": "crop_types", "type": "String"},
+        {"name": "location", "type": "String"},
+        {"name": "experience_years", "type": "Integer"},
+        {"name": "certification", "type": "String"}
+      ]
+    }
+  },
+  "frontend": {
+    "component": {
+      "name": "FarmerProfileForm",
+      "props": [
+        {"name": "farmerId", "type": "number"},
+        {"name": "onSave", "type": "(profile: FarmerProfile) => void"}
+      ]
+    },
+    "page": {
+      "name": "FarmerProfilePage"
+    }
+  },
+  "database": {
+    "migration": {
+      "description": "create farmer_profile table with agricultural fields"
+    }
+  }
+}

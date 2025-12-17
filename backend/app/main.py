@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .database import init_db
 from .core.logging import CorrelationIdMiddleware, setup_logging
-from .routers import health, farmers, marketplace, finance, ai, supplychain, governance, commerce, users, auth, cart, notifications, orders, disputes, analytics, admin, recommendations, social, blockchain, agents
+from .routers import health, farmers, marketplace, finance, ai, supplychain, governance, commerce, users, auth, cart, notifications, orders, disputes, analytics, admin, recommendations, social, blockchain, agents, dev_agents
 from .middleware.security import (
     XSSProtectionMiddleware, 
     CSRFProtectionMiddleware, 
@@ -123,5 +123,6 @@ app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 app.include_router(social.router, prefix="/social", tags=["social"])
 app.include_router(blockchain.router, prefix="/blockchain", tags=["blockchain"])
+app.include_router(dev_agents.router, prefix="/api", tags=["development"])
 
 
