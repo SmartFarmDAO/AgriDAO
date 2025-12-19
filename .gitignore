@@ -18,14 +18,18 @@ dist-ssr/
 *.local
 
 # Environment variables
-.env*
 .env
 .env.local
 .env.development
 .env.test
 .env.production
-backend/.env*
 backend/.env
+frontend/.env
+
+# Allow example files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Editor directories and files
 .vscode/*
