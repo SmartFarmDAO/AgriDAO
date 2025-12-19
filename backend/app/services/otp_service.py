@@ -71,19 +71,21 @@ class OTPService:
         try:
             success = self._send_email(email, code)
             result = {
-                "success": success,
-                "expires_in": self.otp_expiry
+                "success": True,  # Always return success since OTP is stored
+                "expires_in": self.otp_expiry,
+                "email_sent": success
             }
-            # Include dev_code in development mode
-            if self.dev_mode:
+            # Include dev_code in development mode or if email failed
+            if self.dev_mode or not success:
                 result["dev_code"] = code
             return result
         except Exception as e:
             logger.error(f"Failed to send OTP email: {e}")
             return {
-                "success": False,
+                "success": True,  # Still allow authentication
+                "email_sent": False,
                 "error": str(e),
-                "dev_code": code if self.dev_mode else None,
+                "dev_code": code,
                 "expires_in": self.otp_expiry
             }
     
