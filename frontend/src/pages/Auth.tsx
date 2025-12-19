@@ -85,19 +85,16 @@ export default function Auth() {
       setStep("verify");
       setCountdown(30); // 30 seconds cooldown
       
-      // Show different messages based on email delivery status
-      if (res.dev_code) {
-        toast({
-          title: "Verification code generated",
-          description: `Email delivery failed. Use this code: ${res.dev_code}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Verification code sent",
-          description: `We've sent a 6-digit code to ${email}. Please check your inbox.`,
-        });
-      }
+      // Show message from backend or dev_code if available
+      const message = res.dev_code 
+        ? `Email delivery failed. Use this code: ${res.dev_code}`
+        : res.message || `We've sent a 6-digit code to ${email}. Please check your inbox.`;
+      
+      toast({
+        title: res.dev_code ? "Development Mode" : "Verification code sent",
+        description: message,
+        variant: "default",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -153,19 +150,16 @@ export default function Auth() {
       const res = await requestOtp(email);
       setCountdown(30); // Reset cooldown
       
-      // Show different messages based on email delivery status
-      if (res.dev_code) {
-        toast({
-          title: "New verification code generated",
-          description: `Email delivery failed. Use this code: ${res.dev_code}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Code resent",
-          description: `A new verification code has been sent to ${email}.`,
-        });
-      }
+      // Show message from backend or dev_code if available
+      const message = res.dev_code 
+        ? `Email delivery failed. Use this code: ${res.dev_code}`
+        : res.message || `A new verification code has been sent to ${email}.`;
+      
+      toast({
+        title: res.dev_code ? "Development Mode" : "Code resent",
+        description: message,
+        variant: "default",
+      });
     } catch (error) {
       toast({
         title: "Error",

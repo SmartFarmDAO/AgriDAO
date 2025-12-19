@@ -7,7 +7,12 @@ export async function requestOtp(email: string) {
     { email },
     { headers: API_CONFIG.headers, timeout: API_CONFIG.timeout, withCredentials: API_CONFIG.withCredentials }
   );
-  return res.data as { sent: boolean; dev_code?: string };
+  return res.data as { 
+    sent: boolean; 
+    message: string;
+    expires_in: number;
+    dev_code?: string; 
+  };
 }
 
 export async function verifyOtp(email: string, code: string) {

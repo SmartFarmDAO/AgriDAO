@@ -46,13 +46,18 @@ def request_otp(payload: OTPRequest):
     """Request OTP via email"""
     result = otp_service.send_otp_email(payload.email)
     
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to send OTP"))
+    
+    # Return appropriate response based on environment
     response = {
         "sent": True,
+        "message": result.get("message", "Verification code sent"),
         "expires_in": result.get("expires_in", 300)
     }
     
-    # Include dev_code if available (development mode or email failure)
-    if "dev_code" in result and result["dev_code"]:
+    # Include dev_code only in development
+    if "dev_code" in result:
         response["dev_code"] = result["dev_code"]
     
     return response
