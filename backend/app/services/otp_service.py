@@ -32,7 +32,10 @@ class OTPService:
         self.from_name = os.getenv("FROM_NAME", "AgriDAO")
         
         # Check if email is properly configured
-        self.email_configured = bool(self.smtp_password)
+        self.email_configured = bool(self.smtp_password and self.smtp_username)
+        
+        # For development/testing, always provide dev_code
+        self.always_provide_dev_code = os.getenv("ENVIRONMENT", "development") == "development" or not self.email_configured
         
         # SMS configuration
         self.sms_provider = os.getenv("SMS_PROVIDER", "none")
@@ -68,26 +71,26 @@ class OTPService:
             }
         
         # Send email
-        try:
-            success = self._send_email(email, code)
-            result = {
-                "success": True,  # Always return success since OTP is stored
-                "expires_in": self.otp_expiry,
-                "email_sent": success
-            }
-            # Include dev_code in development mode or if email failed
-            if self.dev_mode or not success:
-                result["dev_code"] = code
-            return result
-        except Exception as e:
-            logger.error(f"Failed to send OTP email: {e}")
-            return {
-                "success": True,  # Still allow authentication
-                "email_sent": False,
-                "error": str(e),
-                "dev_code": code,
-                "expires_in": self.otp_expiry
-            }
+        email_sent = False
+        if self.email_configured:
+            try:
+                email_sent = self._send_email(email, code)
+                if email_sent:
+                    logger.info(f"OTP email sent successfully to {email}")
+            except Exception as e:
+                logger.error(f"Failed to send OTP email: {e}")
+        
+        result = {
+            "success": True,  # Always return success since OTP is stored
+            "expires_in": self.otp_expiry,
+            "email_sent": email_sent
+        }
+        
+        # Always include dev_code if email wasn't sent or in dev mode
+        if not email_sent or self.always_provide_dev_code:
+            result["dev_code"] = code
+            
+        return result
     
     def send_otp_sms(self, phone: str) -> Dict[str, any]:
         """Send OTP via SMS"""
