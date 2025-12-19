@@ -58,28 +58,33 @@ class OTPService:
             "attempts": 0
         }
         
-        # In development mode or if email not configured, skip sending
-        if self.dev_mode or not self.email_configured:
-            logger.warning(f"Email not configured or in dev mode. OTP code: {code}")
+        # In development mode, return dev code but still try to send email if configured
+        if self.dev_mode and not self.email_configured:
+            logger.warning(f"Email not configured in dev mode. OTP code: {code}")
             return {
-                "success": False,
+                "success": True,
                 "expires_in": self.otp_expiry,
-                "dev_code": code if self.dev_mode else None
+                "dev_code": code
             }
         
         # Send email
         try:
             success = self._send_email(email, code)
-            return {
+            result = {
                 "success": success,
                 "expires_in": self.otp_expiry
             }
+            # Include dev_code in development mode
+            if self.dev_mode:
+                result["dev_code"] = code
+            return result
         except Exception as e:
             logger.error(f"Failed to send OTP email: {e}")
             return {
                 "success": False,
                 "error": str(e),
-                "dev_code": code if self.dev_mode else None
+                "dev_code": code if self.dev_mode else None,
+                "expires_in": self.otp_expiry
             }
     
     def send_otp_sms(self, phone: str) -> Dict[str, any]:
@@ -216,10 +221,18 @@ class OTPService:
             msg.attach(MIMEText(text_body, "plain"))
             msg.attach(MIMEText(html_body, "html"))
             
-            # Use Gmail SMTP with SSL
-            with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            # Use appropriate SMTP method based on port
+            if self.smtp_port == 465:
+                # SSL connection
+                with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
+            else:
+                # TLS connection (port 587)
+                with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
             
             logger.info(f"OTP email sent successfully to {email}")
             return True
