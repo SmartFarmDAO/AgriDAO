@@ -72,8 +72,10 @@ services:
     container_name: agridao-nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./deployment/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
       - frontend
