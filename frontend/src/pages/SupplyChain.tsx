@@ -67,10 +67,21 @@ export default function SupplyChain() {
       const res = await fetch('/api/supplychain/assets', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
-      const data = await res.json();
-      setAssets(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setAssets(data);
+        } else {
+          console.error('Received non-array data for assets:', data);
+          setAssets([]);
+        }
+      } else {
+        console.error('Failed to fetch assets. Status:', res.status);
+        setAssets([]);
+      }
     } catch (error) {
       console.error('Failed to fetch assets:', error);
+      setAssets([]);
     }
   };
 

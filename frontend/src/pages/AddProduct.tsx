@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import type { DragEvent as ReactDragEvent, ChangeEvent as ReactChangeEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ const AddProduct = () => {
   const { id } = useParams();
   const isEditMode = !!id;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const MAX_IMAGES = 6;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -84,8 +87,14 @@ const AddProduct = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imageDimensions, setImageDimensions] = useState({
+    naturalWidth: 0,
+    naturalHeight: 0,
+    displayWidth: 0,
+    displayHeight: 0,
+  });
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -95,27 +104,28 @@ const AddProduct = () => {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     
-    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-    addImages(files);
+    const files = Array.from(e.dataTransfer.files) as File[];
+    const imageFiles = files.filter(file => (file.type || "").startsWith('image/'));
+    addImages(imageFiles);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: ReactChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
+      const files = Array.from(e.target.files) as File[];
       addImages(files);
     }
   };
 
   const addImages = (files: File[]) => {
-    if (images.length >= 5) {
+    if (images.length >= MAX_IMAGES) {
       toast({
         title: "Maximum images reached",
-        description: "You can upload up to 5 images",
+        description: `You can upload up to ${MAX_IMAGES} images`,
         variant: "destructive",
       });
       return;
@@ -141,46 +151,87 @@ const AddProduct = () => {
     reader.readAsDataURL(file);
   };
 
-  const cropImage = () => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // Fixed standard size: 800x600 pixels
-      const STANDARD_WIDTH = 800;
-      const STANDARD_HEIGHT = 600;
-      
-      canvas.width = STANDARD_WIDTH;
-      canvas.height = STANDARD_HEIGHT;
-      
-      // Draw cropped and scaled image to standard size
-      ctx?.drawImage(
-        img,
-        cropArea.x, cropArea.y, cropArea.width, cropArea.height,
-        0, 0, STANDARD_WIDTH, STANDARD_HEIGHT
+  const cropImage = async () => {
+    if (!rawImage) return;
+
+    // Fixed standard size: 800x600 pixels
+    const STANDARD_WIDTH = 800;
+    const STANDARD_HEIGHT = 600;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = STANDARD_WIDTH;
+    canvas.height = STANDARD_HEIGHT;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    try {
+      // Create bitmap to respect EXIF orientation when supported
+      const dataUrlResponse = await fetch(rawImage);
+      const blob = await dataUrlResponse.blob();
+      let naturalWidth = 0;
+      let naturalHeight = 0;
+
+      let source: CanvasImageSource;
+      if ('createImageBitmap' in window) {
+        const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' as any });
+        source = bitmap;
+        naturalWidth = bitmap.width;
+        naturalHeight = bitmap.height;
+      } else {
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = reject;
+          i.src = rawImage;
+        });
+        source = img;
+        naturalWidth = img.naturalWidth || img.width;
+        naturalHeight = img.naturalHeight || img.height;
+      }
+
+      // Map crop area from displayed image coordinates to natural image coordinates
+      const displayWidth = imageDimensions.displayWidth || naturalWidth;
+      const displayHeight = imageDimensions.displayHeight || naturalHeight;
+      const scaleX = naturalWidth / displayWidth;
+      const scaleY = naturalHeight / displayHeight;
+
+      const sourceX = cropArea.x * scaleX;
+      const sourceY = cropArea.y * scaleY;
+      const sourceWidth = cropArea.width * scaleX;
+      const sourceHeight = cropArea.height * scaleY;
+
+      ctx.drawImage(
+        source,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        STANDARD_WIDTH,
+        STANDARD_HEIGHT
       );
-      
-      // Convert to blob with quality optimization
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const croppedFile = new File([blob], `product-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          const preview = canvas.toDataURL('image/jpeg', 0.85);
-          setImages(prev => [...prev, { file: croppedFile, preview }]);
-          setShowCropper(false);
-          setRawImage('');
-          
-          toast({
-            title: "Image added",
-            description: `Image resized to ${STANDARD_WIDTH}x${STANDARD_HEIGHT}px`,
-          });
-        }
-      }, 'image/jpeg', 0.85);
-    };
-    img.src = rawImage;
+
+      const blobOut = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9)
+      );
+      if (blobOut) {
+        const croppedFile = new File([blobOut], `product-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const preview = canvas.toDataURL('image/jpeg', 0.9);
+        setImages(prev => [...prev, { file: croppedFile, preview }]);
+        setShowCropper(false);
+        setRawImage('');
+        toast({ title: 'Image added', description: `Image resized to ${STANDARD_WIDTH}x${STANDARD_HEIGHT}px` });
+      }
+    } catch (err) {
+      toast({ title: 'Image crop failed', description: 'Please try another image.', variant: 'destructive' });
+    }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     if (!isDragging && !isResizing) return;
     
     const container = e.currentTarget.querySelector('img');
@@ -360,6 +411,40 @@ const AddProduct = () => {
               className="w-full h-auto pointer-events-none"
               style={{ maxHeight: '500px', objectFit: 'contain' }}
               draggable={false}
+              onLoad={(e) => {
+                const imgEl = e.currentTarget;
+                const displayWidth = imgEl.clientWidth;
+                const displayHeight = imgEl.clientHeight;
+
+                const naturalWidth = imgEl.naturalWidth;
+                const naturalHeight = imgEl.naturalHeight;
+
+                setImageDimensions({
+                  naturalWidth,
+                  naturalHeight,
+                  displayWidth,
+                  displayHeight,
+                });
+
+                const targetRatio = 4 / 3;
+                let cropWidth = displayWidth * 0.8;
+                let cropHeight = cropWidth / targetRatio;
+
+                if (cropHeight > displayHeight * 0.8) {
+                  cropHeight = displayHeight * 0.8;
+                  cropWidth = cropHeight * targetRatio;
+                }
+
+                const cropX = (displayWidth - cropWidth) / 2;
+                const cropY = (displayHeight - cropHeight) / 2;
+
+                setCropArea({
+                  x: cropX,
+                  y: cropY,
+                  width: cropWidth,
+                  height: cropHeight,
+                });
+              }}
             />
             <div
               className="absolute border-4 border-primary bg-primary/10 cursor-move"
@@ -486,7 +571,7 @@ const AddProduct = () => {
                   </div>
                 ))}
                 
-                {images.length < 6 && (
+                {images.length < MAX_IMAGES && (
                   <div
                     className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
                       dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
