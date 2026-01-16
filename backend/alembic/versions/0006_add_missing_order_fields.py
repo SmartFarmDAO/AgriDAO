@@ -24,8 +24,6 @@ def upgrade() -> None:
     op.add_column('order', sa.Column('shipping_address', postgresql.JSON(astext_type=sa.Text()), nullable=True))
     op.add_column('order', sa.Column('tracking_number', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True))
     op.add_column('order', sa.Column('notes', sqlmodel.sql.sqltypes.AutoString(length=1000), nullable=True))
-    op.add_column('order', sa.Column('stripe_checkout_session_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
-    op.add_column('order', sa.Column('stripe_payment_intent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
     op.add_column('order', sa.Column('estimated_delivery_date', sa.DateTime(), nullable=True))
     op.add_column('order', sa.Column('delivered_at', sa.DateTime(), nullable=True))
     op.add_column('order', sa.Column('cancelled_at', sa.DateTime(), nullable=True))
