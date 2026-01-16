@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Search, Filter, MapPin, Star, Plus, ShoppingCart, X, Minus, ZoomIn } from "lucide-react";
+import { ArrowLeft, Search, Filter, MapPin, Star, Plus, ShoppingCart, X, Minus, ZoomIn, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listProducts, createCheckoutSession } from "@/lib/api";
 import type { Product } from "@/types";
@@ -91,6 +91,44 @@ const Marketplace = () => {
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.product.id === product.id);
+      const currentQty = existingItem ? existingItem.quantity : 0;
+
+      if (currentQty + 1 > product.quantity_available) {
+        toast({
+          title: "Stock Limit Reached",
+          description: `Only ${product.quantity_available} units available`,
+          variant: "destructive"
+        });
+        return prevCart;
+      }
+
+      if (existingItem) {
+        return prevCart.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prevCart, { product, quantity: 1 }];
+    });
+
+    // Only show toast if we didn't return early (logic check constraint)
+    // Actually the setCart callback runs later, so we can't condition the toast easily outside.
+    // Better to check condition before setCart.
+  };
+
+  const handleAddToCartWrapper = (product: Product) => {
+    const existingItem = cart.find((item) => item.product.id === product.id);
+    const currentQty = existingItem ? existingItem.quantity : 0;
+
+    if (currentQty + 1 > product.quantity_available) {
+      toast({
+        title: "Stock Limit Reached",
+        description: `Only ${product.quantity_available} units available`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCart((prevCart) => {
       if (existingItem) {
         return prevCart.map((item) =>
           item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
@@ -129,11 +167,28 @@ const Marketplace = () => {
   };
 
   const updateCartQuantity = (productId: number, quantity: number) => {
-    setCart((prevCart) =>
-      prevCart
+    setCart((prevCart) => {
+      const item = prevCart.find(i => i.product.id === productId);
+      if (!item) return prevCart;
+
+      if (quantity > item.product.quantity_available) {
+        toast({
+          title: "Stock Limit Reached",
+          description: `Only ${item.product.quantity_available} units available`,
+          variant: "destructive"
+        });
+        return prevCart;
+      }
+
+      return prevCart
         .map((item) => (item.product.id === productId ? { ...item, quantity } : item))
-        .filter((item) => item.quantity > 0)
-    );
+        .filter((item) => item.quantity > 0);
+    });
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    toast({ title: "Cart Cleared", description: "All items have been removed from your cart." });
   };
 
   const removeFromCart = (productId: number) => {
@@ -254,26 +309,71 @@ const Marketplace = () => {
                 {cart.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">{t('cart.empty')}</p>
                 ) : (
-                  cart.map(item => (
-                    <div key={item.product.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">৳{typeof item.product.price === 'number' ? item.product.price.toFixed(2) : parseFloat(item.product.price).toFixed(2)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}>
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span>{item.quantity}</span>
-                        <Button size="icon" variant="ghost" onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => removeFromCart(item.product.id)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  <>
+                    {cart.map(item => {
+                      // Extract image safely
+                      const image = (() => {
+                        try {
+                          if (!item.product.images) return null;
+                          if (Array.isArray(item.product.images)) return item.product.images[0];
+                          if (typeof item.product.images === 'string') {
+                            if (item.product.images.startsWith('[')) {
+                              const parsed = JSON.parse(item.product.images);
+                              return Array.isArray(parsed) ? parsed[0] : null;
+                            }
+                            return item.product.images.replace(/"/g, '');
+                          }
+                          return null;
+                        } catch { return null; }
+                      })();
+
+                      return (
+                        <div key={item.product.id} className="flex items-start gap-4 py-2 border-b last:border-0">
+                          <div className="h-16 w-16 bg-muted rounded overflow-hidden flex-shrink-0">
+                            {image ? (
+                              <img src={image} alt={item.product.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No Img</div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between">
+                              <p className="font-semibold line-clamp-1">{item.product.name}</p>
+                              <p className="font-medium">৳{(item.product.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">৳{item.product.price.toFixed(2)} /unit</p>
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 border rounded-md">
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}>
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="text-sm w-4 text-center">{item.quantity}</span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                                  disabled={item.quantity >= item.product.quantity_available}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.product.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div className="pt-2 flex justify-end">
+                      <Button variant="outline" size="sm" onClick={clearCart} className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="h-3 w-3 mr-2" />
+                        Clear Cart
+                      </Button>
                     </div>
-                  ))
+                  </>
                 )}
               </div>
               <DrawerFooter>
@@ -441,7 +541,7 @@ const Marketplace = () => {
                               </div>
 
                               <div className="flex gap-2 pt-2">
-                                <Button className="flex-1" onClick={() => addToCart(product)}>
+                                <Button className="flex-1" onClick={() => handleAddToCartWrapper(product)}>
                                   {t('common.addToCart')}
                                 </Button>
                                 <Button className="flex-1" variant="secondary" onClick={() => handleBuyNow(product)} disabled={isCheckingOut}>
