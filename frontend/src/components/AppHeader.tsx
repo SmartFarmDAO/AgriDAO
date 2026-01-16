@@ -9,6 +9,7 @@ import { CartButton } from "./CartButton";
 import { UserMenu } from "./UserMenu";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useTranslation } from "@/i18n/config";
+import { createCheckoutSession } from "@/lib/api";
 
 type CartItem = {
   product_id: number;
@@ -179,7 +180,7 @@ export function AppHeader() {
           </div>
 
           {/* Cart */}
-          <CartButton cartCount={cartCount} cartItems={cartItems} />
+          <CartButton cartCount={cartCount} cartItems={cartItems} onCheckout={handleCheckout} />
 
           {/* Language Switcher */}
           <LanguageSwitcher />

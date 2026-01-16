@@ -14,13 +14,18 @@ type CartItem = {
 type CartButtonProps = {
   cartCount: number;
   cartItems: CartItem[];
+  onCheckout?: () => void;
 };
 
-export function CartButton({ cartCount, cartItems }: CartButtonProps) {
+export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps) {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    navigate('/marketplace');
+    if (onCheckout) {
+      onCheckout();
+    } else {
+      navigate('/marketplace');
+    }
   };
 
   return (
