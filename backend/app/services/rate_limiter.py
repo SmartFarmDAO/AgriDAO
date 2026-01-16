@@ -42,7 +42,7 @@ class RateLimiter:
             "/auth/otp/request": RateLimitRule(requests=5, window=300),  # 5 OTP requests per 5 min
             "/auth/otp/verify": RateLimitRule(requests=10, window=300),  # 10 verify attempts per 5 min
             "/auth/magic/request": RateLimitRule(requests=3, window=300),  # 3 magic links per 5 min
-            "/commerce/orders": RateLimitRule(requests=20, window=3600),  # 20 orders per hour
+            "/commerce/orders": RateLimitRule(requests=200, window=3600),  # 200 orders per hour
             "/marketplace/products": RateLimitRule(requests=5, window=60, burst=10),  # 5 products/min, burst 10
         }
         
