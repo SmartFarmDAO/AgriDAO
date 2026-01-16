@@ -26,6 +26,8 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
+      - SEPOLIA_RPC_URL=${BLOCKCHAIN_RPC_URL}
+      - PRIVATE_KEY=${PRIVATE_KEY}
     depends_on:
       - postgres
       - redis
