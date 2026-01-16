@@ -18,6 +18,7 @@ services:
       - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/agridao
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
       - ENVIRONMENT=production
       - CORS_ORIGINS=https://agridao.cloudninjabd.com,https://www.agridao.cloudninjabd.com
       - SMTP_HOST=${SMTP_HOST}
