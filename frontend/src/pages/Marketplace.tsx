@@ -29,7 +29,7 @@ const Marketplace = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const isAuthenticated = () => {
     return !!(secureStorage.get<string>("access_token") || localStorage.getItem("access_token"));
   };
@@ -189,20 +189,20 @@ const Marketplace = () => {
           <DialogHeader>
             <DialogTitle>{t('marketplace.signInRequired')}</DialogTitle>
             <DialogDescription>
-              {cart.length > 0 
+              {cart.length > 0
                 ? t('marketplace.signInToCheckout')
                 : t('marketplace.signInToContinue')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowSignInDialog(false)}
               className="w-full sm:w-auto"
             >
               {t('marketplace.continueShopping')}
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 const redirect = encodeURIComponent(window.location.pathname + window.location.search);
                 window.location.href = `/auth?redirect=${redirect}`;
@@ -218,9 +218,9 @@ const Marketplace = () => {
       {/* Image Viewer Dialog */}
       <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
         <DialogContent className="max-w-4xl">
-          <img 
-            src={viewingImage || ''} 
-            alt="Product" 
+          <img
+            src={viewingImage || ''}
+            alt="Product"
             className="w-full h-auto max-h-[80vh] object-contain"
           />
         </DialogContent>
@@ -359,91 +359,103 @@ const Marketplace = () => {
                     .map((product) => {
                       const images = (() => {
                         try {
-                          if (!product.images || product.images === '[]') return [];
-                          const parsed = JSON.parse(product.images);
-                          return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                          if (!product.images) return [];
+                          // Handle if it's already an array
+                          if (Array.isArray(product.images)) {
+                            return product.images;
+                          }
+                          // Handle if it's a JSON string
+                          if (typeof product.images === 'string') {
+                            if (product.images.startsWith('[')) {
+                              const parsed = JSON.parse(product.images);
+                              return Array.isArray(parsed) ? parsed : [];
+                            }
+                            // Handle single string URL cleanup
+                            return [product.images.replace(/"/g, '')];
+                          }
+                          return [];
                         } catch {
-                          return product.images ? [product.images.replace(/"/g, '')] : [];
+                          return [];
                         }
                       })();
-                      
+
                       return (
-                    <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                      <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
-                        {images.length > 0 ? (
-                          <div className="relative w-full h-full">
-                            <img 
-                              src={images[0]} 
-                              alt={product.name} 
-                              className="w-full h-full object-cover cursor-pointer"
-                              onClick={() => setViewingImage(images[0])}
-                              onError={(e) => {
-                                e.currentTarget.src = '/placeholder.svg';
-                              }}
-                            />
-                            {images.length > 1 && (
-                              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                                +{images.length - 1} more
+                        <Card key={product.id} className="hover:shadow-lg transition-shadow">
+                          <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
+                            {images.length > 0 ? (
+                              <div className="relative w-full h-full">
+                                <img
+                                  src={images[0]}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover cursor-pointer"
+                                  onClick={() => setViewingImage(images[0])}
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/placeholder.svg';
+                                  }}
+                                />
+                                {images.length > 1 && (
+                                  <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                    +{images.length - 1} more
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn className="h-8 w-8 text-white" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center w-full h-full bg-muted">
+                                <span className="text-muted-foreground">No image</span>
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <ZoomIn className="h-8 w-8 text-white" />
+                          </div>
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle>{product.name}</CardTitle>
+                                <CardDescription>{product.category ?? 'Uncategorized'}</CardDescription>
+                              </div>
+                              <Badge variant="outline">{product.quantity} available</Badge>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center w-full h-full bg-muted">
-                            <span className="text-muted-foreground">No image</span>
-                          </div>
-                        )}
-                      </div>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle>{product.name}</CardTitle>
-                            <CardDescription>{product.category ?? 'Uncategorized'}</CardDescription>
-                          </div>
-                          <Badge variant="outline">{product.quantity} available</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <p className="text-muted-foreground text-sm h-10 overflow-hidden">{product.description}</p>
-                          <div className="flex justify-between items-center">
-                            <span className="text-2xl font-bold">
-                              ৳{typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
-                            </span>
-                            <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                              <Star className="h-4 w-4" />
-                              <span>N/A</span>
-                            </div>
-                          </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <p className="text-muted-foreground text-sm h-10 overflow-hidden">{product.description}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-2xl font-bold">
+                                  ৳{typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
+                                </span>
+                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                  <Star className="h-4 w-4" />
+                                  <span>N/A</span>
+                                </div>
+                              </div>
 
-                          <div className="space-y-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              <span>Farmer ID: {product.farmer_id ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Added: {new Date(product.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4" />
+                                  <span>Farmer ID: {product.farmer_id ?? '—'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Added: {new Date(product.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
 
-                          <div className="flex gap-2 pt-2">
-                            <Button className="flex-1" onClick={() => addToCart(product)}>
-                              {t('common.addToCart')}
-                            </Button>
-                            <Button className="flex-1" variant="secondary" onClick={() => handleBuyNow(product)} disabled={isCheckingOut}>
-                              {isCheckingOut ? t('common.loading') : t('common.checkout')}
-                            </Button>
-                            <Button variant="outline" onClick={() => toast({ title: t('products.seller'), description: "Messaging coming soon." })}>
-                              {t('products.seller')}
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                              <div className="flex gap-2 pt-2">
+                                <Button className="flex-1" onClick={() => addToCart(product)}>
+                                  {t('common.addToCart')}
+                                </Button>
+                                <Button className="flex-1" variant="secondary" onClick={() => handleBuyNow(product)} disabled={isCheckingOut}>
+                                  {isCheckingOut ? t('common.loading') : t('common.checkout')}
+                                </Button>
+                                <Button variant="outline" onClick={() => toast({ title: t('products.seller'), description: "Messaging coming soon." })}>
+                                  {t('products.seller')}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                 </div>
               )}
             </div>
