@@ -32,17 +32,22 @@ class XSSProtectionMiddleware(BaseHTTPMiddleware):
         # Check request body for XSS patterns if it's JSON
         if request.headers.get("content-type", "").startswith("application/json"):
             try:
+                # XSS protection in JSON is complex and regex is prone to false positives
+                # Modern frontend frameworks (React/Vue/Angular) handle output escaping
+                # We'll rely on that for now and only block obvious script tags
                 body = await request.body()
                 if body:
                     body_str = body.decode('utf-8')
-                    if self._contains_xss_patterns(body_str):
-                        return JSONResponse(
-                            status_code=400,
-                            content={
-                                "error": "security_violation",
-                                "message": "Request contains potentially malicious content"
-                            }
-                        )
+                    # Less aggressive check for JSON - mainly looking for script injection
+                    if r'<script' in body_str.lower() or r'javascript:' in body_str.lower():
+                         if self._contains_xss_patterns(body_str):
+                            return JSONResponse(
+                                status_code=400,
+                                content={
+                                    "error": "security_violation",
+                                    "message": "Request contains potentially malicious content"
+                                }
+                            )
             except Exception:
                 # If we can't decode the body, let it pass through
                 pass
