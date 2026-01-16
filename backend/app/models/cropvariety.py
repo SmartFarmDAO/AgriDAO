@@ -1,11 +1,15 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from typing import Optional
+from datetime import datetime
+from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, DateTime
 from sqlalchemy.sql import func
-from ..database import Base
 
-class CropVariety(Base):
+class CropVariety(SQLModel, table=True):
     __tablename__ = "crop_varieties"
     
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, index=True)
-    description = Column(Text)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    description: Optional[str] = None
+    created_at: Optional[datetime] = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
