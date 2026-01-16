@@ -103,6 +103,14 @@ def create_checkout_session(payload: CreateCheckoutPayload, authorization: Optio
             session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=item.quantity, unit_price=product.price))
         session.commit()
 
+        if not stripe.api_key:
+            print("MOCK CHECKOUT: Stripe key missing, returning mock success URL")
+            # For mock checkout, we skip Stripe session creation but keep the order
+            order.stripe_checkout_session_id = "mock_session_123"
+            session.add(order)
+            session.commit()
+            return {"checkout_url": f"{payload.success_url}?session_id=mock_session_123", "order_id": order.id}
+
         # create Stripe Checkout Session
         try:
             checkout_session = stripe.checkout.Session.create(
