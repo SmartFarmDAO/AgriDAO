@@ -493,22 +493,10 @@ async def stripe_webhook(request: Request):
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
 
 
-@router.get("/orders")
+@router.get("/orders", response_model=List[Order])
 def list_my_orders(current_user: User = Depends(get_current_user)):
     with Session(engine) as session:
-        orders = session.exec(select(Order).where(Order.buyer_id == current_user.id).order_by(Order.created_at.desc())).all()
-        return [
-            {
-                "id": o.id,
-                "status": o.status,
-                "subtotal": o.subtotal,
-                "platform_fee": o.platform_fee,
-                "total": o.total,
-                "payment_status": o.payment_status,
-                "created_at": o.created_at.isoformat(),
-            }
-            for o in orders
-        ]
+        return session.exec(select(Order).where(Order.buyer_id == current_user.id).order_by(Order.created_at.desc())).all()
 
 
 @router.get("/orders/{order_id}")
