@@ -34,10 +34,13 @@ export default function Dashboard() {
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
-  
+
   const isFarmer = user?.role?.toUpperCase() === 'FARMER';
   const isBuyer = user?.role?.toUpperCase() === 'BUYER';
   const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const isMentor = user?.role?.toUpperCase() === 'MENTOR';
+  const isTrader = user?.role?.toUpperCase() === 'TRADER';
+  const isPolicyMaker = user?.role?.toUpperCase() === 'POLICY_MAKER';
 
   // Fetch users for admin
   const { data: users, refetch: refetchUsers, isLoading: loadingUsers, error: usersError } = useQuery({
@@ -69,12 +72,12 @@ export default function Dashboard() {
     queryKey: ['farmer-products', user?.email],
     queryFn: async () => {
       console.log('Fetching products for:', user?.email, 'Role:', user?.role);
-      
+
       if (!isFarmer && !isAdmin) {
         console.log('Not farmer or admin, returning empty');
         return [];
       }
-      
+
       const accessToken = secureStorage.get<string>('access_token');
       const response = await fetch('/api/marketplace/products', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : undefined,
@@ -85,36 +88,36 @@ export default function Dashboard() {
       }
       const allProducts = await response.json();
       console.log('All products:', allProducts);
-      
+
       // For admins, show all products
       if (isAdmin) {
         console.log('Admin user, showing all products');
         return allProducts;
       }
-      
+
       // For farmers, get their farmer record and filter products
       const farmersResponse = await fetch('/api/farmers/', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : undefined,
       });
-      
+
       if (!farmersResponse.ok) {
         console.log('Farmers fetch failed');
         return [];
       }
       const allFarmers = await farmersResponse.json();
       console.log('All farmers:', allFarmers);
-      
+
       const myFarmer = allFarmers.find((f: any) => f.email === user?.email);
       console.log('My farmer record:', myFarmer);
-      
+
       if (!myFarmer) {
         console.log('No farmer record found for:', user?.email);
         return [];
       }
-      
+
       const myProducts = allProducts.filter((p: any) => p.farmer_id === myFarmer.id);
       console.log('My products:', myProducts);
-      
+
       return myProducts;
     },
     enabled: (isFarmer || isAdmin) && !!user?.email,
@@ -135,24 +138,24 @@ export default function Dashboard() {
 
       const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
       console.log('Updating product', productId, 'to', newStatus);
-      
+
       const response = await fetch(`/api/marketplace/products/${productId}/status?status=${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || 'Failed to update product status');
       }
-      
+
       toast({
         title: "Success",
         description: `Product ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
       });
-      
+
       refetchProducts();
     } catch (error) {
       console.error('Status update error:', error);
@@ -181,7 +184,7 @@ export default function Dashboard() {
         headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
       });
       const { csrf_token } = await csrfResponse.json();
-      
+
       const response = await fetch(`/api/marketplace/products/${productId}`, {
         method: 'DELETE',
         headers: {
@@ -189,17 +192,17 @@ export default function Dashboard() {
           'X-CSRF-Token': csrf_token,
         },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || 'Failed to delete product');
       }
-      
+
       toast({
         title: "Success",
         description: "Product deleted successfully",
       });
-      
+
       refetchProducts();
     } catch (error) {
       console.error('Delete error:', error);
@@ -273,7 +276,7 @@ export default function Dashboard() {
 
   const filteredUsers = users?.filter((u: any) => {
     const matchesSearch = u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         u.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = selectedRole === 'all' || u.role?.toLowerCase() === selectedRole.toLowerCase();
     return matchesSearch && matchesRole;
   }) || [];
@@ -367,6 +370,9 @@ export default function Dashboard() {
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="buyer">Buyers</SelectItem>
                   <SelectItem value="farmer">Farmers</SelectItem>
+                  <SelectItem value="mentor">Mentors</SelectItem>
+                  <SelectItem value="trader">Traders</SelectItem>
+                  <SelectItem value="policy_maker">Policy Makers</SelectItem>
                   <SelectItem value="admin">Admins</SelectItem>
                 </SelectContent>
               </Select>
@@ -435,6 +441,24 @@ export default function Dashboard() {
                                     Farmer
                                   </div>
                                 </SelectItem>
+                                <SelectItem value="MENTOR">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                                    Mentor
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="TRADER">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                    Trader
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="POLICY_MAKER">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-teal-500" />
+                                    Policy Maker
+                                  </div>
+                                </SelectItem>
                                 <SelectItem value="ADMIN">
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-purple-500" />
@@ -445,7 +469,7 @@ export default function Dashboard() {
                             </Select>
                           </TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={userItem.status === 'ACTIVE' ? 'default' : 'destructive'}
                               className="font-medium"
                             >
@@ -634,71 +658,70 @@ export default function Dashboard() {
                         return product.images ? [product.images.replace(/"/g, '')] : [];
                       }
                     })();
-                    
+
                     return (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent"
-                    >
-                      {images.length > 0 && (
-                        <div className="relative">
-                          <img 
-                            src={images[0]} 
-                            alt={product.name}
-                            className="w-20 h-20 object-cover rounded"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                          {images.length > 1 && (
-                            <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                              +{images.length - 1}
-                            </div>
-                          )}
+                      <div
+                        key={product.id}
+                        className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent"
+                      >
+                        {images.length > 0 && (
+                          <div className="relative">
+                            <img
+                              src={images[0]}
+                              alt={product.name}
+                              className="w-20 h-20 object-cover rounded"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            {images.length > 1 && (
+                              <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                                +{images.length - 1}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground">{product.category}</p>
+                          <div className="flex items-center gap-4 mt-2 text-sm">
+                            <span className="font-medium">
+                              ${typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {product.quantity_available || 0} {product.unit || 'units'} available
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs ${product.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                              {product.status || 'Active'}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{product.name}</h4>
-                        <p className="text-sm text-muted-foreground">{product.category}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm">
-                          <span className="font-medium">
-                            ${typeof product.price === 'number' ? product.price.toFixed(2) : parseFloat(product.price).toFixed(2)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {product.quantity_available || 0} {product.unit || 'units'} available
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            product.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {product.status || 'Active'}
-                          </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant={product.status === 'ACTIVE' ? 'default' : 'secondary'}
+                            size="sm"
+                            onClick={() => handleToggleStatus(product.id, product.status)}
+                          >
+                            {product.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/products/${product.id}/edit`)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteProductId(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={product.status === 'ACTIVE' ? 'default' : 'secondary'}
-                          size="sm"
-                          onClick={() => handleToggleStatus(product.id, product.status)}
-                        >
-                          {product.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/products/${product.id}/edit`)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteProductId(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
+                    );
                   })}
                 </div>
               )}

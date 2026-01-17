@@ -1,0 +1,13 @@
+OpenSSH_9.9p2, LibreSSL 3.3.6
+debug1: Reading configuration data /Users/sohagmahamud/.ssh/config
+debug1: /Users/sohagmahamud/.ssh/config line 8: Applying options for 54.251.65.124
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug1: Reading configuration data /etc/ssh/ssh_config.d/100-macos.conf
+debug1: /etc/ssh/ssh_config.d/100-macos.conf line 1: Applying options for *
+debug1: Reading configuration data /etc/ssh/crypto.conf
+debug1: Authenticator provider $SSH_SK_PROVIDER did not resolve; disabling
+debug1: Connecting to 54.251.65.124 [54.251.65.124] port 22.
+debug1: Connection established.
+debug1: identity file /Users/sohagmahamud/.ssh/agridao.pem type -1
+debug1: identity file /Users/sohagmahamud/.ssh/agridao.pem-cert type -1
+debug1: Local version string SSH-2.0-OpenSSH_9.9
