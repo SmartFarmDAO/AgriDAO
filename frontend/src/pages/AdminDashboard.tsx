@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,8 +17,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  Users, ShoppingCart, Package, DollarSign, 
+import {
+  Users, ShoppingCart, Package, DollarSign,
   Search, Trash2, Ban, CheckCircle, TrendingUp,
   Activity, BarChart3, Shield, AlertTriangle, UserX, Bot
 } from 'lucide-react';
@@ -160,7 +161,7 @@ export default function AdminDashboard() {
   const handleToggleProductStatus = async (productId: number, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      
+
       const response = await fetch(`/api/marketplace/products/${productId}/status?status=${newStatus}`, {
         method: 'PATCH',
         headers: {
@@ -236,7 +237,7 @@ export default function AdminDashboard() {
 
   const filteredUsers = users?.filter((u: any) => {
     const matchesSearch = u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         u.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = selectedRole === 'all' || u.role?.toLowerCase() === selectedRole.toLowerCase();
     return matchesSearch && matchesRole;
   }) || [];
@@ -461,7 +462,7 @@ export default function AdminDashboard() {
                               </Select>
                             </TableCell>
                             <TableCell>
-                              <Badge 
+                              <Badge
                                 variant={user.status === 'ACTIVE' ? 'default' : 'destructive'}
                                 className="font-medium"
                               >
@@ -630,8 +631,8 @@ export default function AdminDashboard() {
                       <span className="text-muted-foreground">Farmers</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-green-500" 
+                          <div
+                            className="h-full bg-green-500"
                             style={{ width: `${stats.totalUsers ? (stats.farmers / stats.totalUsers * 100) : 0}%` }}
                           />
                         </div>
@@ -642,8 +643,8 @@ export default function AdminDashboard() {
                       <span className="text-muted-foreground">Buyers</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-blue-500" 
+                          <div
+                            className="h-full bg-blue-500"
                             style={{ width: `${stats.totalUsers ? (stats.buyers / stats.totalUsers * 100) : 0}%` }}
                           />
                         </div>
@@ -654,8 +655,8 @@ export default function AdminDashboard() {
                       <span className="text-muted-foreground">Admins</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-purple-500" 
+                          <div
+                            className="h-full bg-purple-500"
                             style={{ width: `${stats.totalUsers ? (stats.admins / stats.totalUsers * 100) : 0}%` }}
                           />
                         </div>
@@ -684,8 +685,8 @@ export default function AdminDashboard() {
                       <span className="text-muted-foreground">Active Listings</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-green-500" 
+                          <div
+                            className="h-full bg-green-500"
                             style={{ width: `${stats.totalProducts ? (stats.activeProducts / stats.totalProducts * 100) : 0}%` }}
                           />
                         </div>
@@ -696,8 +697,8 @@ export default function AdminDashboard() {
                       <span className="text-muted-foreground">Inactive</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gray-400" 
+                          <div
+                            className="h-full bg-gray-400"
                             style={{ width: `${stats.totalProducts ? ((stats.totalProducts - stats.activeProducts) / stats.totalProducts * 100) : 0}%` }}
                           />
                         </div>
@@ -727,15 +728,15 @@ export default function AdminDashboard() {
                       return acc;
                     }, {});
                     return Object.entries(categories)
-                      .sort(([,a]: any, [,b]: any) => b - a)
+                      .sort(([, a]: any, [, b]: any) => b - a)
                       .slice(0, 5)
                       .map(([category, count]: any) => (
                         <div key={category} className="flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">{category}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-blue-500" 
+                              <div
+                                className="h-full bg-blue-500"
                                 style={{ width: `${(count / stats.totalProducts * 100)}%` }}
                               />
                             </div>

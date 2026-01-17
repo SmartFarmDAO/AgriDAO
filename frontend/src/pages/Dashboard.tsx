@@ -651,11 +651,19 @@ export default function Dashboard() {
                   {products.map((product: any) => {
                     const images = (() => {
                       try {
-                        if (!product.images || product.images === '[]') return [];
-                        const parsed = JSON.parse(product.images);
-                        return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
-                      } catch {
-                        return product.images ? [product.images.replace(/"/g, '')] : [];
+                        if (!product.images) return [];
+                        if (Array.isArray(product.images)) return product.images;
+                        if (typeof product.images === 'string') {
+                          if (product.images.startsWith('[') && product.images.endsWith(']')) {
+                            const parsed = JSON.parse(product.images);
+                            return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                          }
+                          return [product.images.replace(/"/g, '').replace(/[\[\]]/g, '')];
+                        }
+                        return [];
+                      } catch (e) {
+                        console.error("Error parsing images:", e);
+                        return [];
                       }
                     })();
 
