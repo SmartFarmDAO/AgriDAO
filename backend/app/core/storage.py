@@ -445,7 +445,7 @@ class CloudStorageManager:
     
     async def _calculate_checksum(self, file_path: str) -> str:
         """Calculate MD5 checksum of file."""
-        hash_md5 = hashlib.md5()
+        hash_md5 = hashlib.md5(usedforsecurity=False)
         async with aiofiles.open(file_path, 'rb') as f:
             async for chunk in f:
                 hash_md5.update(chunk)

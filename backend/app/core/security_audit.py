@@ -287,7 +287,7 @@ class SecurityAuditor:
         
         for pattern in weak_patterns:
             vulns.append(Vulnerability(
-                vuln_id=f"WEAK-PWD-{hashlib.md5(pattern.encode()).hexdigest()[:8]}",
+                vuln_id=f"WEAK-PWD-{hashlib.md5(pattern.encode(), usedforsecurity=False).hexdigest()[:8]}",
                 discovered_at=datetime.utcnow(),
                 severity=SeverityLevel.HIGH,
                 category="authentication",
@@ -310,7 +310,7 @@ class SecurityAuditor:
         
         for pattern in sql_patterns:
             vulns.append(Vulnerability(
-                vuln_id=f"SQLI-{hashlib.md5(pattern.encode()).hexdigest()[:8]}",
+                vuln_id=f"SQLI-{hashlib.md5(pattern.encode(), usedforsecurity=False).hexdigest()[:8]}",
                 discovered_at=datetime.utcnow(),
                 severity=SeverityLevel.CRITICAL,
                 category="injection",
@@ -336,7 +336,7 @@ class SecurityAuditor:
         
         for pattern in xss_patterns:
             vulns.append(Vulnerability(
-                vuln_id=f"XSS-{hashlib.md5(pattern.encode()).hexdigest()[:8]}",
+                vuln_id=f"XSS-{hashlib.md5(pattern.encode(), usedforsecurity=False).hexdigest()[:8]}",
                 discovered_at=datetime.utcnow(),
                 severity=SeverityLevel.HIGH,
                 category="injection",
@@ -387,7 +387,7 @@ class SecurityAuditor:
         
         for endpoint in exposed_endpoints:
             vulns.append(Vulnerability(
-                vuln_id=f"EXPOSED-{hashlib.md5(endpoint.encode()).hexdigest()[:8]}",
+                vuln_id=f"EXPOSED-{hashlib.md5(endpoint.encode(), usedforsecurity=False).hexdigest()[:8]}",
                 discovered_at=datetime.utcnow(),
                 severity=SeverityLevel.MEDIUM,
                 category="access_control",
@@ -412,7 +412,7 @@ class SecurityAuditor:
         
         for pattern in sensitive_patterns:
             vulns.append(Vulnerability(
-                vuln_id=f"LEAK-{hashlib.md5(pattern.encode()).hexdigest()[:8]}",
+                vuln_id=f"LEAK-{hashlib.md5(pattern.encode(), usedforsecurity=False).hexdigest()[:8]}",
                 discovered_at=datetime.utcnow(),
                 severity=SeverityLevel.HIGH,
                 category="data_protection",

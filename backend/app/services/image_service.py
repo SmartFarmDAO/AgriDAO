@@ -101,7 +101,7 @@ class ImageProcessor:
         """Generate unique filename for image."""
         # Create hash from original filename and timestamp
         hash_input = f"{original_filename}{uuid.uuid4()}"
-        file_hash = hashlib.md5(hash_input.encode()).hexdigest()[:12]
+        file_hash = hashlib.md5(hash_input.encode(), usedforsecurity=False).hexdigest()[:12]
         
         # Get file extension
         ext = Path(original_filename).suffix.lower()

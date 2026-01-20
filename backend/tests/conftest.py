@@ -33,6 +33,17 @@ def _setup_db() -> Generator[None, None, None]:
         shutil.rmtree(TEST_DB_DIR, ignore_errors=True)
 
 
+@pytest.fixture(autouse=True)
+def _cleanup_db():
+    """Clean up database between tests to avoid UNIQUE constraint violations."""
+    yield
+    # Clean up after each test
+    with Session(engine) as session:
+        # Delete all users to avoid conflicts
+        session.exec(SQLModel.metadata.tables['user'].delete())
+        session.commit()
+
+
 @pytest.fixture()
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app) as c:
@@ -40,32 +51,35 @@ def client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def admin_user():
-    """Create an admin user for testing."""
+def db_session() -> Generator[Session, None, None]:
+    """Provide a database session for tests."""
     with Session(engine) as session:
-        user = User(
-            email="admin@example.com",
-            name="Admin User",
-            role=UserRole.ADMIN,
-            # hashed_password removed as it's not in the model
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
+        yield session
 
 
 @pytest.fixture
-def regular_user():
+def admin_user(db_session: Session):
+    """Create an admin user for testing."""
+    user = User(
+        email="admin@example.com",
+        name="Admin User",
+        role=UserRole.ADMIN,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def regular_user(db_session: Session):
     """Create a regular user for testing."""
-    with Session(engine) as session:
-        user = User(
-            email="user@example.com",
-            name="Regular User",
-            role=UserRole.BUYER,
-            # hashed_password removed as it's not in the model
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
+    user = User(
+        email="user@example.com",
+        name="Regular User",
+        role=UserRole.BUYER,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
