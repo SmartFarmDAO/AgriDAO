@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cart Test</title>
+</head>
+<body>
+    <h1>Cart Functionality Test</h1>
+    <button onclick="testAddToCart()">Test Add to Cart</button>
+    <button onclick="testCartStorage()">Test Cart Storage</button>
+    <div id="output"></div>
+
+    <script>
+        function testAddToCart() {
+            const product = {
+                id: 1,
+                name: "Test Product",
+                price: "50.00",
+                quantity: 10
+            };
+
+            // Simulate adding to cart
+            let cart = JSON.parse(localStorage.getItem('cart_items') || '[]');
+            
+            const existingItem = cart.find(item => item.product_id === product.id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    product_id: product.id,
+                    quantity: 1,
+                    name: product.name,
+                    price: parseFloat(product.price)
+                });
+            }
+
+            localStorage.setItem('cart_items', JSON.stringify(cart));
+            document.getElementById('output').innerHTML = `<pre>${JSON.stringify(cart, null, 2)}</pre>`;
+            console.log('Cart updated:', cart);
+        }
+
+        function testCartStorage() {
+            const cart = JSON.parse(localStorage.getItem('cart_items') || '[]');
+            document.getElementById('output').innerHTML = `<pre>${JSON.stringify(cart, null, 2)}</pre>`;
+            console.log('Current cart:', cart);
+        }
+    </script>
+</body>
+</html>
