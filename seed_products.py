@@ -106,6 +106,132 @@ def seed_products():
                 "quantity_available": 100,
                 "unit": "dozen",
                 "image": "https://images.unsplash.com/photo-1582722878654-02fd235dd3de?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Fresh Tomatoes",
+                "description": "Vine-ripened tomatoes, perfect for salads and cooking.",
+                "category": "Vegetables",
+                "price": 35.00,
+                "quantity_available": 300,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Golden Bananas",
+                "description": "Sweet and ripe bananas from Chittagong hill tracts.",
+                "category": "Fruits",
+                "price": 45.00,
+                "quantity_available": 400,
+                "unit": "dozen",
+                "image": "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Organic Spinach",
+                "description": "Fresh green spinach leaves, rich in iron and vitamins.",
+                "category": "Vegetables",
+                "price": 30.00,
+                "quantity_available": 120,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Basmati Rice",
+                "description": "Premium aged Basmati rice with authentic aroma and long grains.",
+                "category": "Grains",
+                "price": 95.00,
+                "quantity_available": 800,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Fresh Carrots",
+                "description": "Crunchy orange carrots, great for juicing or cooking.",
+                "category": "Vegetables",
+                "price": 40.00,
+                "quantity_available": 250,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Coconuts",
+                "description": "Fresh coconuts from coastal regions, perfect for cooking oil and milk.",
+                "category": "Fruits",
+                "price": 35.00,
+                "quantity_available": 500,
+                "unit": "piece",
+                "image": "https://images.unsplash.com/photo-1589606663923-283bbd309229?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Yellow Mustard Seeds",
+                "description": "High quality mustard seeds for oil extraction and cooking.",
+                "category": "Grains",
+                "price": 85.00,
+                "quantity_available": 180,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1599909533730-f9d49c0c9b4f?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Fresh Cauliflower",
+                "description": "White and firm cauliflower heads, perfect for curries.",
+                "category": "Vegetables",
+                "price": 50.00,
+                "quantity_available": 150,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1568584711271-e0e4e8d7e8e1?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Guavas",
+                "description": "Sweet and aromatic guavas, rich in vitamin C.",
+                "category": "Fruits",
+                "price": 60.00,
+                "quantity_available": 180,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1536511132770-e5058c7e8c46?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Chickpeas (Kabuli Chana)",
+                "description": "Premium quality chickpeas, perfect for curries and salads.",
+                "category": "Grains",
+                "price": 130.00,
+                "quantity_available": 200,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Fresh Milk",
+                "description": "Pure cow's milk from local dairy farms, pasteurized and fresh.",
+                "category": "Dairy & Eggs",
+                "price": 75.00,
+                "quantity_available": 300,
+                "unit": "liter",
+                "image": "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Pumpkins",
+                "description": "Large orange pumpkins, great for curries and desserts.",
+                "category": "Vegetables",
+                "price": 28.00,
+                "quantity_available": 220,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1569976710208-b52636b52c1b?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Papayas",
+                "description": "Ripe and sweet papayas, excellent for digestion.",
+                "category": "Fruits",
+                "price": 55.00,
+                "quantity_available": 160,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?auto=format&fit=crop&q=80&w=800"
+            },
+            {
+                "name": "Ginger Root",
+                "description": "Fresh ginger roots with strong aroma, perfect for tea and cooking.",
+                "category": "Vegetables",
+                "price": 150.00,
+                "quantity_available": 80,
+                "unit": "kg",
+                "image": "https://images.unsplash.com/photo-1599909533730-f9d49c0c9b4f?auto=format&fit=crop&q=80&w=800"
             }
         ]
 

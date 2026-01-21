@@ -291,11 +291,25 @@ const Marketplace = () => {
                     .map((product) => {
                       const images = (() => {
                         try {
+                          // If images is already an array, return it directly
+                          if (Array.isArray(product.images)) {
+                            return product.images;
+                          }
+                          // If images is null, undefined, or empty, return empty array
                           if (!product.images || product.images === '[]') return [];
-                          const parsed = JSON.parse(product.images);
-                          return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                          // If it's a string, try to parse it
+                          if (typeof product.images === 'string') {
+                            try {
+                              const parsed = JSON.parse(product.images);
+                              return Array.isArray(parsed) ? parsed : [product.images.replace(/"/g, '')];
+                            } catch {
+                              // If parsing fails, treat as a single image URL
+                              return [product.images.replace(/"/g, '')];
+                            }
+                          }
+                          return [];
                         } catch {
-                          return product.images ? [product.images.replace(/"/g, '')] : [];
+                          return [];
                         }
                       })();
 
