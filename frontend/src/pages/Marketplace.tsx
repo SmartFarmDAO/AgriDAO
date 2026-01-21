@@ -190,7 +190,7 @@ const Marketplace = () => {
                     <div key={item.product.id} className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">৳{formatPrice(item.product.price)}</p>
+                        <p className="text-sm text-muted-foreground">BDT {formatPrice(item.product.price)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="icon" variant="ghost" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
@@ -212,15 +212,15 @@ const Marketplace = () => {
                 <div className="space-y-1 mb-2">
                   <div className="flex justify-between text-sm">
                     <span>{t('cart.subtotal')}</span>
-                    <span>৳{formatPrice(cartTotal)}</span>
+                    <span>BDT {formatPrice(cartTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>{t('cart.platformFee')} ({(PLATFORM_FEE_RATE * 100).toFixed(0)}%)</span>
-                    <span>৳{formatPrice(platformFee)}</span>
+                    <span>BDT {formatPrice(platformFee)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2">
                     <span className="font-bold text-lg">{t('cart.total')}</span>
-                    <span className="font-bold text-lg">৳{formatPrice(grandTotal)}</span>
+                    <span className="font-bold text-lg">BDT {formatPrice(grandTotal)}</span>
                   </div>
                 </div>
                 <Button onClick={handleCheckout} disabled={cart.length === 0 || isCheckingOut}>
@@ -348,7 +348,7 @@ const Marketplace = () => {
                                 <CardTitle>{product.name}</CardTitle>
                                 <CardDescription>{product.category ?? 'Uncategorized'}</CardDescription>
                               </div>
-                              <Badge variant="outline">{product.quantity} available</Badge>
+                              <Badge variant="outline">{product.quantity_available} {product.unit} available</Badge>
                             </div>
                           </CardHeader>
                           <CardContent>
@@ -356,7 +356,7 @@ const Marketplace = () => {
                               <p className="text-muted-foreground text-sm h-10 overflow-hidden">{product.description}</p>
                               <div className="flex justify-between items-center">
                                 <span className="text-2xl font-bold">
-                                  ৳{formatPrice(product.price)}
+                                  BDT {formatPrice(product.price)}
                                 </span>
                                 <div className="flex items-center gap-1 text-muted-foreground text-sm">
                                   <Star className="h-4 w-4" />
@@ -446,7 +446,7 @@ const Marketplace = () => {
           <Card>
             <CardContent className="p-6 text-center">
               <div className="text-2xl font-bold text-primary">
-                ৳{products ? (products.reduce((sum, p) => {
+                BDT {products ? (products.reduce((sum, p) => {
                   const safePrice = typeof p.price === 'number' ? p.price : parseFloat(p.price);
                   const price = isNaN(safePrice) ? 0 : safePrice;
                   return sum + (price * (p.quantity_available || 0));
