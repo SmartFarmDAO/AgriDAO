@@ -115,6 +115,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return prev;
             }
 
+            // Normalize product price to number to prevent toFixed errors
+            const normalizedProduct = {
+                ...product,
+                price: typeof product.price === 'number' 
+                    ? product.price 
+                    : parseFloat(product.price as string) || 0
+            };
+
             if (existing) {
                 toast({
                     title: t('marketplace.addedToCart') || "Added to cart",
@@ -129,7 +137,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 title: t('marketplace.addedToCart') || "Added to cart",
                 description: `${product.name} ${t('marketplace.productAddedToCart') || "added to your cart."}`
             });
-            return [...prev, { product, quantity: 1 }];
+            return [...prev, { product: normalizedProduct, quantity: 1 }];
         });
     };
 
