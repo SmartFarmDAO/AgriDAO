@@ -14,6 +14,7 @@ import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '@/config/wagmi';
 import { LanguageProvider } from '@/components/LanguageProvider';
 import { CartProvider } from '@/contexts/CartContext';
+import { Web3Provider } from '@/contexts/Web3Context';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Pages
@@ -160,11 +161,13 @@ const App: React.FC = () => {
                 <AuthProvider>
                   <LanguageProvider>
                     <ConfigProvider>
-                      <CartProvider>
-                        <Toaster />
-                        <Sonner />
-                        <AppRoutes />
-                      </CartProvider>
+                      <Web3Provider>
+                        <CartProvider>
+                          <Toaster />
+                          <Sonner />
+                          <AppRoutes />
+                        </CartProvider>
+                      </Web3Provider>
                     </ConfigProvider>
                   </LanguageProvider>
                 </AuthProvider>
