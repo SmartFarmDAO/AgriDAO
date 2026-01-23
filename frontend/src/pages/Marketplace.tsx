@@ -16,13 +16,17 @@ import { useToast } from "@/components/ui/use-toast";
 import { secureStorage } from "@/lib/security";
 import { useTranslation } from "@/i18n/config";
 import { useCart } from "@/contexts/CartContext";
+import { useWeb3 } from "@/contexts/Web3Context";
+import { parseEther } from "ethers";
 
 const PLATFORM_FEE_RATE = Number(import.meta.env.VITE_PLATFORM_FEE_RATE ?? 0.08);
+const BDT_TO_ETH = 0.0000033; // Approx rate for demo
 
 const Marketplace = () => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
-  const { cart, addToCart, removeFromCart, updateQuantity, cartTotal, formatPrice } = useCart();
+  const { cart, addToCart, removeFromCart, updateQuantity, cartTotal, formatPrice, clearCart } = useCart();
+  const { account, connect, escrow } = useWeb3();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
@@ -113,6 +117,68 @@ const Marketplace = () => {
     }
   };
 
+  const handleCryptoCheckout = async () => {
+    if (!isAuthenticated()) {
+      setShowSignInDialog(true);
+      return;
+    }
+
+    if (!account) {
+      try {
+        await connect();
+      } catch (e) {
+        toast({ title: "Connection Failed", description: "Could not connect wallet.", variant: "destructive" });
+      }
+      return;
+    }
+
+    if (!escrow) {
+      toast({
+        title: "System Error",
+        description: "Blockchain connection not ready. Please refresh or try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const totalEth = (grandTotal * BDT_TO_ETH).toFixed(18); // Use standard 18 decimal precision string
+
+      // Generate numeric order ID (using timestamp for uniqueness in demo)
+      const orderId = Math.floor(Date.now() / 1000);
+
+      // Mock Seller Address (Platform Treasury/Deployer)
+      // In real app, this would be the farmer's wallet from the product data
+      const sellerAddress = "0x02ac37285C293434D89214994217962f2b4b3971";
+
+      const tx = await escrow.createOrder(orderId, sellerAddress, {
+        value: parseEther(totalEth)
+      });
+
+      toast({ title: "Transaction Sent", description: "Waiting for blockchain confirmation..." });
+
+      await tx.wait();
+
+      toast({
+        title: "Order Confirmed!",
+        description: `Order #${orderId} successfully placed on blockchain.`
+      });
+
+      clearCart();
+
+    } catch (e: any) {
+      console.error(e);
+      toast({
+        title: "Transaction Failed",
+        description: e.message || "Unknown blockchain error.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Sign In Dialog */}
@@ -171,68 +237,8 @@ const Marketplace = () => {
             <h1 className="text-3xl font-bold">{t('marketplace.title')}</h1>
             <p className="text-muted-foreground">{t('home.subtitle')}</p>
           </div>
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button variant="outline">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                {t('cart.title')} ({cart.reduce((sum, item) => sum + item.quantity, 0)})
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>{t('cart.title')}</DrawerTitle>
-              </DrawerHeader>
-              <div className="px-4 space-y-4">
-                {cart.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">{t('cart.empty')}</p>
-                ) : (
-                  cart.map(item => (
-                    <div key={item.product.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">BDT {formatPrice(item.product.price)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span>{item.quantity}</span>
-                        <Button size="icon" variant="ghost" onClick={() => updateQuantity(item.product.id, item.quantity + 1)}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => removeFromCart(item.product.id)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              <DrawerFooter>
-                <div className="space-y-1 mb-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{t('cart.subtotal')}</span>
-                    <span>BDT {formatPrice(cartTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>{t('cart.platformFee')} ({(PLATFORM_FEE_RATE * 100).toFixed(0)}%)</span>
-                    <span>BDT {formatPrice(platformFee)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="font-bold text-lg">{t('cart.total')}</span>
-                    <span className="font-bold text-lg">BDT {formatPrice(grandTotal)}</span>
-                  </div>
-                </div>
-                <Button onClick={handleCheckout} disabled={cart.length === 0 || isCheckingOut}>
-                  {isCheckingOut ? t('common.loading') : t('common.checkout')}
-                </Button>
-                <DrawerClose asChild>
-                  <Button variant="outline">{t('marketplace.continueShopping')}</Button>
-                </DrawerClose>
-              </DrawerFooter>
-            </DrawerContent>
-          </Drawer>
         </div>
+
 
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">

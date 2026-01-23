@@ -10,21 +10,15 @@ import { UserMenu } from "./UserMenu";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useTranslation } from "@/i18n/config";
 import { createCheckoutSession } from "@/lib/api";
-
-type CartItem = {
-  product_id: number;
-  quantity: number;
-  name?: string;
-  price?: number;
-};
+import { useCart } from "@/contexts/CartContext";
 
 export function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState<number>(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const { cart, cartTotal, updateQuantity, removeFromCart } = useCart();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -33,68 +27,11 @@ export function AppHeader() {
     setUserEmail(u?.email ?? null);
   }, [location.pathname]);
 
-  // Cart listener (count + items)
-  useEffect(() => {
-    const compute = () => {
-      try {
-        const raw = localStorage.getItem("cart_items");
-        if (!raw) {
-          setCartCount(0);
-          setCartItems([]);
-          return;
-        }
-        const items: CartItem[] = JSON.parse(raw);
-        const total = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
-        setCartCount(total);
-        setCartItems(items);
-      } catch {
-        setCartCount(0);
-        setCartItems([]);
-      }
-    };
-
-    compute();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "cart_items") compute();
-    };
-    const onCustom = () => compute();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("cart_updated", onCustom as EventListener);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("cart_updated", onCustom as EventListener);
-    };
-  }, []);
-
-  const cartTotal = cartItems.reduce((sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 0), 0);
-
-  const persistCart = (items: Array<{ product_id: number; quantity: number; name?: string; price?: number }>) => {
-    try {
-      localStorage.setItem("cart_items", JSON.stringify(items));
-      setCartItems(items);
-      setCartCount(items.reduce((s, it) => s + Number(it.quantity || 0), 0));
-      window.dispatchEvent(new CustomEvent("cart_updated"));
-    } catch {
-      // noop
-    }
-  };
-
-  const updateQty = (product_id: number, qty: number) => {
-    const items = cartItems
-      .map(it => it.product_id === product_id ? { ...it, quantity: Math.max(0, qty) } : it)
-      .filter(it => it.quantity > 0);
-    persistCart(items);
-  };
-
-  const removeItem = (product_id: number) => {
-    persistCart(cartItems.filter(it => it.product_id !== product_id));
-  };
-
   const handleCheckout = async () => {
-    if (!cartItems.length) return;
+    if (!cart.length) return;
     try {
       const payload = {
-        items: cartItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+        items: cart.map(i => ({ product_id: i.product.id, quantity: i.quantity })),
         success_url: `${window.location.origin}/orders`,
         cancel_url: window.location.href,
       };
@@ -116,18 +53,14 @@ export function AppHeader() {
     }
   };
 
-  const onSignOut = () => {
-    secureStorage.remove("access_token");
-    secureStorage.remove("current_user");
-    navigate("/");
-  };
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md shadow-sm">
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center">
-          <button 
+          <button
             className="mr-2 p-2 text-gray-600 hover:bg-gray-100 rounded-md md:hidden"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
@@ -162,16 +95,16 @@ export function AppHeader() {
           {/* Search - Hidden on mobile */}
           <div className="hidden md:block relative">
             <div className="relative">
-              <input 
-                placeholder="Search products, farms..." 
+              <input
+                placeholder="Search products, farms..."
                 className="h-9 w-64 rounded-full border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                type="search" 
+                type="search"
               />
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -180,7 +113,14 @@ export function AppHeader() {
           </div>
 
           {/* Cart */}
-          <CartButton cartCount={cartCount} cartItems={cartItems} onCheckout={handleCheckout} />
+          <CartButton
+            cartCount={cartCount}
+            cartItems={cart}
+            cartTotal={cartTotal}
+            onCheckout={handleCheckout}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeFromCart}
+          />
 
           {/* Language Switcher */}
           <LanguageSwitcher />
@@ -189,8 +129,8 @@ export function AppHeader() {
           {userEmail ? (
             <UserMenu userEmail={userEmail} />
           ) : (
-            <Button 
-              onClick={() => navigate('/auth')} 
+            <Button
+              onClick={() => navigate('/auth')}
               className="hidden md:flex items-center space-x-1.5 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
             >
               <span>{t('common.signIn')}</span>
@@ -216,8 +156,8 @@ export function AppHeader() {
               </span>
             </NavLink>
             {!userEmail && (
-              <Button 
-                onClick={() => navigate('/auth')} 
+              <Button
+                onClick={() => navigate('/auth')}
                 className="w-full mt-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
               >
                 {t('common.signIn')}
@@ -228,6 +168,6 @@ export function AppHeader() {
       )}
     </header>
   );
-};
+}
 
 export default AppHeader;

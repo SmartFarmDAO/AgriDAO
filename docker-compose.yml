@@ -1,11 +1,11 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: agridao-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: agridb
     ports:
       - "5432:5432"
@@ -22,7 +22,7 @@ services:
       - "6379:6379"
     volumes:
       - redisdata:/data
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
     networks:
       - agridao-dev
 
@@ -87,7 +87,7 @@ volumes:
   pgdata:
   redisdata:
 
+
 networks:
   agridao-dev:
     driver: bridge
-

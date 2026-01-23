@@ -57,24 +57,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (Array.isArray(parsed)) {
                     // Attempt to normalize
                     const validItems: CartItem[] = parsed.map((item: any) => {
-                        if (item.product) return item as CartItem;
+                        // Check for valid product structure
+                        if (item.product && item.product.name && (typeof item.product.price !== 'undefined')) {
+                            return item as CartItem;
+                        }
                         // If old format, try to adapt if possible, or filter out
                         // Old: { product_id, quantity, name, price }
-                        // We can construct a partial Product object to keep it working
-                        if (item.product_id) {
+                        if (item.product_id && item.name) {
                             return {
                                 product: {
                                     id: item.product_id,
                                     name: item.name,
                                     price: item.price,
-                                    // defaults
-                                    created_at: new Date().toISOString()
+                                    created_at: new Date().toISOString(),
+                                    quantity_available: 100 // Default fallback
                                 } as Product,
                                 quantity: item.quantity
                             };
                         }
                         return null;
-                    }).filter(Boolean) as CartItem[];
+                    }).filter((item): item is CartItem => item !== null);
                     setCart(validItems);
                 }
             }
@@ -118,8 +120,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Normalize product price to number to prevent toFixed errors
             const normalizedProduct = {
                 ...product,
-                price: typeof product.price === 'number' 
-                    ? product.price 
+                price: typeof product.price === 'number'
+                    ? product.price
                     : parseFloat(product.price as string) || 0
             };
 

@@ -1,23 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Minus, Plus, X } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-
-type CartItem = {
-  product_id: number;
-  quantity: number;
-  name?: string;
-  price?: number | string;
-};
+import { CartItem } from "@/contexts/CartContext";
 
 type CartButtonProps = {
   cartCount: number;
   cartItems: CartItem[];
+  cartTotal: number;
   onCheckout?: () => void;
+  onUpdateQuantity: (productId: number, quantity: number) => void;
+  onRemoveItem: (productId: number) => void;
 };
 
-export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps) {
+export function CartButton({
+  cartCount,
+  cartItems,
+  cartTotal,
+  onCheckout,
+  onUpdateQuantity,
+  onRemoveItem
+}: CartButtonProps) {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
@@ -26,6 +29,23 @@ export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps
     } else {
       navigate('/marketplace');
     }
+  };
+
+  const handleIncrement = (item: CartItem) => {
+    onUpdateQuantity(item.product.id, item.quantity + 1);
+  };
+
+  const handleDecrement = (item: CartItem) => {
+    if (item.quantity > 1) {
+      onUpdateQuantity(item.product.id, item.quantity - 1);
+    } else {
+      onRemoveItem(item.product.id);
+    }
+  };
+
+  const formatPrice = (price: string | number) => {
+    const num = typeof price === 'number' ? price : parseFloat(price);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
   };
 
   return (
@@ -61,17 +81,17 @@ export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps
             <>
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.product_id} className="flex items-start justify-between gap-4 p-3 rounded-lg border">
+                  <div key={item.product.id} className="flex items-start justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{item.name || `Product ${item.product_id}`}</h4>
-                      <p className="text-sm text-gray-600">৳{typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(item.price || '0').toFixed(2)} each</p>
+                      <h4 className="font-medium text-gray-900">{item.product.name}</h4>
+                      <p className="text-sm text-gray-600">৳{formatPrice(item.product.price)} each</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {}}>
-                        <Minus className="h-3 w-3" />
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleDecrement(item)}>
+                        {item.quantity === 1 ? <Trash2 className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                       </Button>
                       <span className="w-6 text-center text-sm">{item.quantity}</span>
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {}}>
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleIncrement(item)}>
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
@@ -82,10 +102,7 @@ export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
                   <span>
-                    ৳{cartItems.reduce((sum, item) => {
-                      const price = typeof item.price === 'number' ? item.price : parseFloat(item.price || '0');
-                      return sum + price * item.quantity;
-                    }, 0).toFixed(2)}
+                    ৳{cartTotal.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -94,7 +111,7 @@ export function CartButton({ cartCount, cartItems, onCheckout }: CartButtonProps
         </div>
         {cartItems.length > 0 && (
           <DrawerFooter className="border-t">
-            <Button 
+            <Button
               className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
               onClick={handleCheckout}
             >
