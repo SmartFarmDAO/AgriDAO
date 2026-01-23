@@ -333,12 +333,11 @@ const Marketplace = () => {
                         <Card key={product.id} className="hover:shadow-lg transition-shadow">
                           <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
                             {images.length > 0 ? (
-                              <div className="relative w-full h-full">
+                              <div className="relative w-full h-full cursor-pointer" onClick={() => setViewingImage(images[0])}>
                                 <img
                                   src={images[0]}
                                   alt={product.name}
-                                  className="w-full h-full object-cover cursor-pointer"
-                                  onClick={() => setViewingImage(images[0])}
+                                  className="w-full h-full object-cover"
                                   onError={(e) => {
                                     e.currentTarget.src = '/placeholder.svg';
                                   }}
