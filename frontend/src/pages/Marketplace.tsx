@@ -214,13 +214,23 @@ const Marketplace = () => {
       </Dialog>
 
       {/* Image Viewer Dialog */}
-      <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
-        <DialogContent className="max-w-4xl">
-          <img
-            src={viewingImage || ''}
-            alt="Product"
-            className="w-full h-auto max-h-[80vh] object-contain"
-          />
+      <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
+        <DialogContent className="max-w-screen-lg p-0 bg-transparent border-none shadow-none">
+          <div className="relative flex items-center justify-center min-h-[50vh]">
+            <img
+              src={viewingImage || ''}
+              alt="Product Full View"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border"
+            />
+            <Button
+              variant="secondary"
+              size="icon"
+              className="absolute top-4 right-4 rounded-full bg-black/50 hover:bg-black/70 text-white border-none"
+              onClick={() => setViewingImage(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
