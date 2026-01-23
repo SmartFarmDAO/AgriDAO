@@ -84,7 +84,7 @@ export function CartButton({
                   <div key={item.product.id} className="flex items-start justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                      <p className="text-sm text-gray-600">৳{formatPrice(item.product.price)} each</p>
+                      <p className="text-sm text-gray-600">৳{formatPrice(item.product.price)} per {item.product.unit || 'unit'}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleDecrement(item)}>
