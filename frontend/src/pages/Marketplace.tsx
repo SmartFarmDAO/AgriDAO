@@ -362,7 +362,7 @@ const Marketplace = () => {
                               <p className="text-muted-foreground text-sm h-10 overflow-hidden">{product.description}</p>
                               <div className="flex justify-between items-center">
                                 <span className="text-2xl font-bold">
-                                  BDT {formatPrice(product.price)}
+                                  ৳ {formatPrice(product.price)}
                                 </span>
                                 <div className="flex items-center gap-1 text-muted-foreground text-sm">
                                   <Star className="h-4 w-4" />
@@ -452,7 +452,7 @@ const Marketplace = () => {
           <Card>
             <CardContent className="p-6 text-center">
               <div className="text-2xl font-bold text-primary">
-                BDT {products ? (products.reduce((sum, p) => {
+                ৳ {products ? (products.reduce((sum, p) => {
                   const safePrice = typeof p.price === 'number' ? p.price : parseFloat(p.price);
                   const price = isNaN(safePrice) ? 0 : safePrice;
                   return sum + (price * (p.quantity_available || 0));
