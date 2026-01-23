@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 5173,
-    allowedHosts: ["agridao.cloudninjabd.com", "www.agridao.cloudninjabd.com"],
+    allowedHosts: ["agridao.cloudninjabd.com", "www.agridao.cloudninjabd.com", "frontend"],
     proxy: {
       '/api': {
         target: 'http://backend:8000',
