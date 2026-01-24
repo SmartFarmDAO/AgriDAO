@@ -28,7 +28,7 @@ import OrdersPage from "./pages/Orders";
 import OrderDetailPage from "./pages/OrderDetail";
 import UserManagement from "./pages/UserManagement";
 import SupplyChain from "./pages/SupplyChain";
-import Governance from "./pages/Governance";
+import DAOGovernance from "./pages/DAOGovernance";
 import AI from "./pages/AI";
 import Dashboard from "./pages/Dashboard";
 import AddProduct from "./pages/AddProduct";
@@ -100,7 +100,7 @@ const AppRoutes: React.FC = () => {
           </Route>
           <Route path="users" element={<UserManagement />} />
           <Route path="supply-chain" element={<SupplyChain />} />
-          <Route path="governance" element={<Governance />} />
+          <Route path="governance" element={<DAOGovernance />} />
           <Route path="ai" element={<AI />} />
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="community" element={<Community />} />

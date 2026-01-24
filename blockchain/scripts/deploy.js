@@ -8,7 +8,7 @@ async function main() {
 
   // Deploy AgriDAO
   const AgriDAO = await hre.ethers.getContractFactory("AgriDAO");
-  const agriDAO = await AgriDAO.deploy();
+  const agriDAO = await AgriDAO.deploy(5 * 60); // 5 minutes voting period
   await agriDAO.waitForDeployment();
   const agriDAOAddress = await agriDAO.getAddress();
   console.log("AgriDAO deployed to:", agriDAOAddress);

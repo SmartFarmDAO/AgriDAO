@@ -24,8 +24,12 @@ contract AgriDAO {
     uint256 public proposalCount;
     uint256 public memberCount;
     
-    uint256 public constant VOTING_PERIOD = 3 days;
+    uint256 public immutable votingPeriod;
     uint256 public constant MIN_VOTING_POWER = 1;
+
+    constructor(uint256 _votingPeriod) {
+        votingPeriod = _votingPeriod;
+    }
 
     event MemberAdded(address indexed member, uint256 votingPower);
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string description);
@@ -57,7 +61,7 @@ contract AgriDAO {
         proposal.id = proposalId;
         proposal.proposer = msg.sender;
         proposal.description = description;
-        proposal.endTime = block.timestamp + VOTING_PERIOD;
+        proposal.endTime = block.timestamp + votingPeriod;
         proposal.executed = false;
         
         emit ProposalCreated(proposalId, msg.sender, description);

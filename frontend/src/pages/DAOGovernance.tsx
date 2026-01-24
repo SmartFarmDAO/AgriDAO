@@ -17,10 +17,12 @@ interface Proposal {
 }
 
 export default function DAOGovernance() {
+  console.log("DAOGovernance Component Loaded");
   const { account, agriDAO } = useWeb3();
   const [isMember, setIsMember] = useState(false);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [newProposal, setNewProposal] = useState('');
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,9 +47,9 @@ export default function DAOGovernance() {
     try {
       const count = await agriDAO.proposalCount();
       const loadedProposals: Proposal[] = [];
-      
+
       for (let i = 0; i < Number(count); i++) {
-        const [proposer, description, forVotes, againstVotes, endTime, executed] = 
+        const [proposer, description, forVotes, againstVotes, endTime, executed] =
           await agriDAO.getProposal(i);
         loadedProposals.push({
           id: i,
@@ -59,7 +61,7 @@ export default function DAOGovernance() {
           executed
         });
       }
-      
+
       setProposals(loadedProposals.reverse());
     } catch (error) {
       console.error('Failed to load proposals:', error);
@@ -82,13 +84,15 @@ export default function DAOGovernance() {
   };
 
   const createProposal = async () => {
-    if (!agriDAO || !newProposal.trim()) return;
+    if (!agriDAO || !newProposal.trim() || !title.trim()) return;
     setLoading(true);
     try {
-      const tx = await agriDAO.createProposal(newProposal);
+      const fullDescription = `# ${title}\n\n${newProposal}`;
+      const tx = await agriDAO.createProposal(fullDescription);
       await tx.wait();
       toast.success('Proposal created!');
       setNewProposal('');
+      setTitle('');
       loadProposals();
     } catch (error: any) {
       toast.error(error.message || 'Failed to create proposal');
@@ -107,6 +111,21 @@ export default function DAOGovernance() {
       loadProposals();
     } catch (error: any) {
       toast.error(error.message || 'Failed to vote');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeProposal = async (proposalId: number) => {
+    if (!agriDAO) return;
+    setLoading(true);
+    try {
+      const tx = await agriDAO.executeProposal(proposalId);
+      await tx.wait();
+      toast.success('Proposal executed!');
+      loadProposals();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to execute proposal');
     } finally {
       setLoading(false);
     }
@@ -149,14 +168,20 @@ export default function DAOGovernance() {
           <CardTitle>Create Proposal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Input
+            placeholder="Proposal Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="mb-2"
+          />
           <Textarea
             placeholder="Describe your proposal..."
             value={newProposal}
             onChange={(e) => setNewProposal(e.target.value)}
             rows={4}
           />
-          <Button onClick={createProposal} disabled={loading || !newProposal.trim()}>
-            {loading ? 'Creating...' : 'Create Proposal'}
+          <Button onClick={createProposal} disabled={loading || !newProposal.trim() || !title.trim()}>
+            {loading ? 'Creating...' : 'Create Proposal (Web3)'}
           </Button>
         </CardContent>
       </Card>
@@ -199,6 +224,16 @@ export default function DAOGovernance() {
                       Vote Against
                     </Button>
                   </div>
+                )}
+                {!proposal.executed && Date.now() / 1000 > Number(proposal.endTime) && proposal.forVotes > proposal.againstVotes && (
+                  <Button
+                    onClick={() => executeProposal(proposal.id)}
+                    disabled={loading}
+                    size="sm"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Execute Proposal
+                  </Button>
                 )}
               </CardContent>
             </Card>

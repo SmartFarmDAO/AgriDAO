@@ -21,9 +21,11 @@ const AGRIDAO_ABI = [
   "function getMember(address account) external view returns (bool, uint256, uint256)",
   "function proposalCount() external view returns (uint256)",
   "function memberCount() external view returns (uint256)",
+  "function executeProposal(uint256 proposalId) external",
   "event MemberAdded(address indexed member, uint256 votingPower)",
   "event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string description)",
-  "event VoteCast(uint256 indexed proposalId, address indexed voter, bool support, uint256 weight)"
+  "event VoteCast(uint256 indexed proposalId, address indexed voter, bool support, uint256 weight)",
+  "event ProposalExecuted(uint256 indexed proposalId)"
 ];
 
 const ESCROW_ABI = [
