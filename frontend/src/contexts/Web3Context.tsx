@@ -55,11 +55,53 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
     try {
       const browserProvider = new BrowserProvider(window.ethereum);
+      const targetChainId = BigInt(11155111); // Sepolia
+      let network = await browserProvider.getNetwork();
+
+      if (network.chainId !== targetChainId) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xaa36a7' }], // 11155111 in hex
+          });
+        } catch (switchError: any) {
+          // This error code indicates that the chain has not been added to MetaMask.
+          if (switchError.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: '0xaa36a7',
+                    chainName: 'Sepolia Test Network',
+                    nativeCurrency: {
+                      name: 'SepoliaETH',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                    rpcUrls: ['https://sepolia.infura.io/v3/'],
+                    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                  },
+                ],
+              });
+            } catch (addError) {
+              console.error('Failed to add Sepolia network:', addError);
+            }
+          } else {
+            console.error('Failed to switch network:', switchError);
+          }
+        }
+        // Refresh provider and network after switch
+        const newProvider = new BrowserProvider(window.ethereum);
+        network = await newProvider.getNetwork();
+        setProvider(newProvider);
+      } else {
+        setProvider(browserProvider);
+      }
+
       const accounts = await browserProvider.send('eth_requestAccounts', []);
-      const network = await browserProvider.getNetwork();
       const signer = await browserProvider.getSigner();
 
-      setProvider(browserProvider);
       setAccount(accounts[0]);
       setChainId(Number(network.chainId));
 
