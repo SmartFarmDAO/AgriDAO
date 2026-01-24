@@ -18,7 +18,7 @@ interface Proposal {
 
 export default function DAOGovernance() {
   console.log("DAOGovernance Component Loaded");
-  const { account, agriDAO } = useWeb3();
+  const { account, agriDAO, connect } = useWeb3();
   const [isMember, setIsMember] = useState(false);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [newProposal, setNewProposal] = useState('');
@@ -135,8 +135,9 @@ export default function DAOGovernance() {
     return (
       <div className="container mx-auto p-6">
         <Card>
-          <CardContent className="p-6 text-center">
-            <p>Please connect your wallet to access DAO governance</p>
+          <CardContent className="p-6 text-center space-y-4">
+            <p className="text-muted-foreground">Please connect your wallet to access DAO governance</p>
+            <Button onClick={connect}>Connect Wallet</Button>
           </CardContent>
         </Card>
       </div>
